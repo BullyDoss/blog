@@ -47,7 +47,6 @@
 
 <script>
 import axios from 'axios';
-import { api } from '@/utils/api.js';
 
 export default {
   data() {
@@ -77,7 +76,7 @@ export default {
   },
   async mounted() {
     try {
-      const res = await axios.get(api('/api/posts'), { timeout: 8000 });
+      const res = await axios.get('http://localhost:3000/api/posts', { timeout: 8000 });
       this.posts = Array.isArray(res.data) ? res.data : [];
     } catch (err) {
       console.error('获取文章失败:', err.message || err);

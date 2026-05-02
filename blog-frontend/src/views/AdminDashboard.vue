@@ -110,7 +110,6 @@
 
 <script>
 import axios from 'axios'
-import { api } from '@/utils/api.js'
 
 export default {
   name: 'AdminDashboard',
@@ -139,7 +138,7 @@ export default {
     async fetchPosts() {
       this.loading = true
       try {
-        const res = await axios.get(api('/api/admin/posts'), { headers: this.getAuthHeaders() })
+        const res = await axios.get('http://localhost:3000/api/admin/posts', { headers: this.getAuthHeaders() })
         this.posts = res.data
       } catch (e) { console.error(e) } finally { this.loading = false }
     },
@@ -169,10 +168,10 @@ export default {
       try {
         const fd = new FormData()
         fd.append('image', file)
-        const res = await axios.post(api('/api/images/upload'), fd, {
+        const res = await axios.post('http://localhost:3000/api/images/upload', fd, {
           headers: { 'Content-Type': 'multipart/form-data' }, timeout: 15000
         })
-        const imageUrl = api(res.data.url)
+        const imageUrl = 'http://localhost:3000' + res.data.url
         const md = '\n![](' + imageUrl + ')\n'
         this.formData.content += md
         this.uploadStatus = '已插入'
@@ -190,10 +189,10 @@ export default {
       this.submitting = true; this.errorMsg = ''; this.successMsg = ''
       try {
         if (this.currentView === 'create') {
-          await axios.post(api('/api/admin/posts'), this.formData, { headers: this.getAuthHeaders() })
+          await axios.post('http://localhost:3000/api/admin/posts', this.formData, { headers: this.getAuthHeaders() })
           this.successMsg = '发布成功'
         } else {
-          await axios.put(api('/api/admin/posts/' + this.editingPostId), this.formData, { headers: this.getAuthHeaders() })
+          await axios.put('http://localhost:3000/api/admin/posts/' + this.editingPostId, this.formData, { headers: this.getAuthHeaders() })
           this.successMsg = '更新成功'
         }
         setTimeout(() => { this.fetchPosts(); this.currentView = 'list'; this.resetForm() }, 800)
@@ -208,7 +207,7 @@ export default {
       if (!this.postToDelete) return
       this.deleting = true
       try {
-        await axios.delete(api('/api/admin/posts/' + this.postToDelete.id), { headers: this.getAuthHeaders() })
+        await axios.delete('http://localhost:3000/api/admin/posts/' + this.postToDelete.id), { headers: this.getAuthHeaders() })
         this.showDeleteDialog = false; this.postToDelete = null; this.fetchPosts()
       } catch (e) { alert('删除失败') } finally { this.deleting = false }
     },

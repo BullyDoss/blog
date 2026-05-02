@@ -85,7 +85,6 @@
 <script>
 import axios from 'axios';
 import { marked } from 'marked';
-import { api, imgUrl } from '@/utils/api.js';
 
 export default {
   name: 'PostDetail',
@@ -128,7 +127,7 @@ export default {
   methods: {
     getFullUrl(url) {
       if (!url) return '';
-      return imgUrl(url);
+      return url.startsWith('http') ? url : `http://localhost:3000${url}`;
     },
 
     formatDate(d) {
@@ -141,7 +140,7 @@ export default {
 
     async loadList() {
       try {
-        const res = await axios.get(api('/api/posts'), {
+        const res = await axios.get('http://localhost:3000/api/posts', {
           params: { category: this.channelKey }, timeout: 8000
         });
         this.posts = Array.isArray(res.data) ? res.data : [];
@@ -154,12 +153,12 @@ export default {
       this.loading = true;
       this.errorMsg = '';
       try {
-        const postRes = await axios.get(api(`/api/posts/${slug}`));
+        const postRes = await axios.get(`http://localhost:3000/api/posts/${slug}`);
         this.selectedPost = postRes.data;
 
         const [imgRes, commentRes] = await Promise.all([
-          axios.get(api(`/api/posts/${this.selectedPost.id}/images`)),
-          axios.get(api(`/api/posts/${this.selectedPost.id}/comments`)),
+          axios.get(`http://localhost:3000/api/posts/${this.selectedPost.id}/images`),
+          axios.get(`http://localhost:3000/api/posts/${this.selectedPost.id}/comments`),
         ]);
         this.images = imgRes.data;
         this.comments = commentRes.data;
@@ -177,12 +176,12 @@ export default {
       }
       this.submitting = true; this.errorMsg = ''; this.successMsg = '';
       try {
-        await axios.post(api(`/api/posts/${this.selectedPost.id}/comments`), {
+        await axios.post(`http://localhost:3000/api/posts/${this.selectedPost.id}/comments`, {
           author: this.newComment.author, content: this.newComment.content
         });
         this.successMsg = '评论成功';
         this.newComment = { author: '', content: '' };
-        const res = await axios.get(api(`/api/posts/${this.selectedPost.id}/comments`));
+        const res = await axios.get(`http://localhost:3000/api/posts/${this.selectedPost.id}/comments`);
         this.comments = res.data;
         setTimeout(() => { this.successMsg = ''; }, 3000);
       } catch (err) {

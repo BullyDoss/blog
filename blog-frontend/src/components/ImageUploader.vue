@@ -24,7 +24,6 @@
 
 <script>
 import axios from 'axios';
-import { api, imgUrl } from '@/utils/api.js';
 
 export default {
   name: 'ImageUploader',
@@ -46,7 +45,7 @@ export default {
   methods: {
     getFullUrl(url) {
       if (!url) return '';
-      return imgUrl(url);
+      return url.startsWith('http') ? url : `http://localhost:3000${url}`;
     },
 
     async handleFileSelect(e) {
@@ -60,7 +59,7 @@ export default {
       formData.append('image', file);
 
       try {
-        const res = await axios.post(api('/api/images/upload'), formData, {
+        const res = await axios.post('http://localhost:3000/api/images/upload', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
           timeout: 15000,
         });

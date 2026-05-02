@@ -23,7 +23,6 @@
 
 <script>
 import axios from 'axios'
-import { api } from '@/utils/api.js'
 
 export default {
   name: 'BlogSidebar',
@@ -62,7 +61,7 @@ export default {
     async fetchPosts() {
       this.loading = true
       try {
-        const res = await axios.get(api('/api/posts'), { timeout: 8000 })
+        const res = await axios.get('http://localhost:3000/api/posts', { timeout: 8000 })
         this.posts = Array.isArray(res.data) ? res.data : []
       } catch (e) {
         console.error('获取文章失败:', e.message || e)

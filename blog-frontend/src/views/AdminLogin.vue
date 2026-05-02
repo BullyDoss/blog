@@ -37,7 +37,6 @@
 
 <script>
 import axios from 'axios'
-import { api } from '@/utils/api.js'
 
 export default {
   name: 'AdminLogin',
@@ -53,7 +52,7 @@ export default {
       this.loading = true
       this.errorMsg = ''
       try {
-        const res = await axios.post(api('/api/admin/login'), {
+        const res = await axios.post('http://localhost:3000/api/admin/login', {
           username: this.loginForm.username,
           password: this.loginForm.password
         })

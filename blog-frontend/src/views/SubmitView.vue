@@ -33,7 +33,6 @@
 
 <script>
 import axios from 'axios'
-import { api } from '@/utils/api.js'
 
 export default {
   name: 'SubmitView',
@@ -56,7 +55,7 @@ export default {
       this.successMsg = ''
       try {
         const slug = 'submit-' + Date.now()
-        await axios.post(api('/api/submit'), {
+        await axios.post('http://localhost:3000/api/submit', {
           title: this.form.title,
           author: this.form.author,
           content: this.form.content,

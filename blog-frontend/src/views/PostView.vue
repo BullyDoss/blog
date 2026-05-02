@@ -76,7 +76,6 @@
 <script>
 import axios from 'axios';
 import { marked } from 'marked';
-import { api } from '@/utils/api.js';
 
 export default {
   data() {
@@ -102,10 +101,10 @@ export default {
   async mounted() {
     const slug = this.$route.params.slug;
     try {
-      const postRes = await axios.get(api(`/api/posts/${slug}`));
+      const postRes = await axios.get(`http://localhost:3000/api/posts/${slug}`);
       this.post = postRes.data;
 
-      const commentsRes = await axios.get(api(`/api/posts/${this.post.id}/comments`));
+      const commentsRes = await axios.get(`http://localhost:3000/api/posts/${this.post.id}/comments`);
       this.comments = commentsRes.data;
     } catch (err) {
       console.error('获取文章详情失败:', err);
@@ -126,7 +125,7 @@ export default {
       this.successMsg = '';
 
       try {
-        await axios.post(api(`/api/posts/${this.post.id}/comments`), {
+        await axios.post(`http://localhost:3000/api/posts/${this.post.id}/comments`, {
           author: this.newComment.author,
           content: this.newComment.content
         });
@@ -136,7 +135,7 @@ export default {
         this.newComment.author = '';
         this.newComment.content = '';
 
-        const res = await axios.get(api(`/api/posts/${this.post.id}/comments`));
+        const res = await axios.get(`http://localhost:3000/api/posts/${this.post.id}/comments`);
         this.comments = res.data;
 
         setTimeout(() => {
