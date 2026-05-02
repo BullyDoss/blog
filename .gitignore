@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.env
+uploads/
+*.log
+.DS_Store
+Thumbs.db
+blog-frontend/node_modules/
+blog-frontend/dist/
+blog-backend/node_modules/
+blog-backend/uploads/
