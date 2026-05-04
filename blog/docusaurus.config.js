@@ -54,12 +54,6 @@ module.exports = {
       },
       items: [
         { to: '/', label: '首页', position: 'left' },
-        {
-          type: 'docsVersionDropdown',
-          position: 'left',
-          dropdownItemsAfter: [],
-          dropdownActiveClassDisabled: true,
-        },
       ],
     },
     footer: {
