@@ -1,0 +1,15 @@
+name = "blog"
+compatibility_date = "2024-01-01"
+
+[vars]
+ENVIRONMENT = "production"
+JWT_SECRET = "your-jwt-secret-change-this-in-production"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "blog-db"
+database_id = "790e82a4-170b-473e-8b0d-09f0f7d3aa04"
+
+[[r2_buckets]]
+binding = "IMAGES"
+bucket_name = "blog-images"

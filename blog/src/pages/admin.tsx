@@ -56,35 +56,50 @@ function LoginForm({ onSuccess }: { onSuccess: (token: string) => void }) {
     setError('');
 
     try {
-      const apiBase = 'https://blog-api.bullydoss-blog.workers.dev';
-      
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      const apiBase = '';
 
-      const response = await fetch(`${apiBase}/api/admin/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-        signal: controller.signal,
-      });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+      let response: Response;
+      try {
+        response = await fetch(`${apiBase}/api/admin/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+          signal: controller.signal,
+        });
+      } catch (fetchErr: any) {
+        clearTimeout(timeoutId);
+        if (fetchErr.name === 'AbortError') {
+          setError('❌ 连接超时 (15秒)\n\n可能原因：\n• Worker 未正确部署\n• 网络防火墙阻止\n• API 地址错误');
+        } else if (fetchErr.message.includes('Failed to fetch') || fetchErr.message.includes('NetworkError')) {
+          setError('❌ 网络请求失败\n\n请检查：\n1. 刷新页面重试\n2. 检查网络连接\n3. 如果问题持续请联系管理员');
+        } else {
+          setError(`❌ 网络错误: ${fetchErr.message}`);
+        }
+        return;
+      }
 
       clearTimeout(timeoutId);
 
+      const responseText = await response.text();
+
       if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.error || `服务器错误 (${response.status})`);
+        let errorMsg;
+        try {
+          const errorData = JSON.parse(responseText);
+          errorMsg = errorData.error || errorData.message || `HTTP ${response.status}`;
+        } catch {
+          errorMsg = `HTTP ${response.status}: ${responseText.slice(0, 100)}`;
+        }
+        throw new Error(errorMsg);
       }
 
-      const data = await response.json();
+      const data = JSON.parse(responseText);
       onSuccess(data.token);
     } catch (err: any) {
-      if (err.name === 'AbortError') {
-        setError('❌ 连接超时，请检查网络或 API 地址');
-      } else if (err.message.includes('fetch')) {
-        setError('❌ 无法连接到 API 服务器\n\n请确认：\n• Worker 是否已部署\n• API 地址是否正确：https://blog-api.bullydoss-blog.workers.dev');
-      } else {
-        setError(`❌ ${err.message}`);
-      }
+      setError(`❌ ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -329,7 +344,7 @@ function PostsManager({ token }: { token: string }) {
     setLoading(true);
     setError('');
     try {
-      const apiBase = 'https://blog-api.bullydoss-blog.workers.dev';
+      const apiBase = '';
       const response = await fetch(`${apiBase}/api/admin/posts`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -358,7 +373,7 @@ function PostsManager({ token }: { token: string }) {
     if (!confirm('确定要删除这篇文章吗？此操作不可恢复！')) return;
 
     try {
-      const apiBase = 'https://blog-api.bullydoss-blog.workers.dev';
+      const apiBase = '';
       const response = await fetch(`${apiBase}/api/admin/posts/${postId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
@@ -551,7 +566,7 @@ function SubmissionsManager({ token }: { token: string }) {
   const fetchSubmissions = async () => {
     setLoading(true);
     try {
-      const apiBase = 'https://blog-api.bullydoss-blog.workers.dev';
+      const apiBase = '';
       const response = await fetch(`${apiBase}/api/admin/posts?status=pending`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -573,7 +588,7 @@ function SubmissionsManager({ token }: { token: string }) {
 
   const approvePost = async (postId: number) => {
     try {
-      const apiBase = 'https://blog-api.bullydoss-blog.workers.dev';
+      const apiBase = '';
       const response = await fetch(`${apiBase}/api/admin/posts/${postId}`, {
         method: 'PUT',
         headers: {
