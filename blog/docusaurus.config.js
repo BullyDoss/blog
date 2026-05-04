@@ -5,10 +5,10 @@ module.exports = {
   url: 'https://your-blog.pages.dev',
   baseUrl: '/',
 
-  onBrokenLinks: 'throw',
+  onBrokenLinks: 'warn',
   onBrokenMarkdownLinks: 'warn',
 
-  organizationName: 'your-github-username',
+  organizationName: 'BullyDoss',
   projectName: 'blog',
   trailingSlash: false,
 
@@ -53,11 +53,13 @@ module.exports = {
         src: 'img/logo.svg',
       },
       items: [
-        { to: '/notes', label: '学习笔记', position: 'left' },
-        { to: '/brainstorm', label: '思维风暴', position: 'left' },
-        { to: '/chat', label: '生活碎片', position: 'left' },
-        { to: '/daily', label: '投稿专区', position: 'left' },
-        { to: '/submit', label: '我要投稿', position: 'right' },
+        { to: '/', label: '首页', position: 'left' },
+        {
+          type: 'docsVersionDropdown',
+          position: 'left',
+          dropdownItemsAfter: [],
+          dropdownActiveClassDisabled: true,
+        },
       ],
     },
     footer: {
@@ -70,19 +72,6 @@ module.exports = {
         plain: {},
         styles: [],
       },
-    },
-    giscus: {
-      repo: 'YOUR_GITHUB_USERNAME/YOUR_REPO_NAME',
-      repoId: 'YOUR_REPO_ID',
-      category: 'Announcements',
-      categoryId: 'YOUR_CATEGORY_ID',
-      mapping: 'pathname',
-      strict: true,
-      reactionsEnabled: true,
-      emitMetadata: false,
-      inputPosition: 'top',
-      lang: 'zh-CN',
-      loading: 'lazy',
     },
   },
 };

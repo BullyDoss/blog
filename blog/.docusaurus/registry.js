@@ -1,5 +1,4 @@
 export default {
-  "__comp---site-src-pages-admin-tsx-049-57e": [() => import(/* webpackChunkName: "__comp---site-src-pages-admin-tsx-049-57e" */ "@site/src/pages/admin.tsx"), "@site/src/pages/admin.tsx", require.resolveWeak("@site/src/pages/admin.tsx")],
   "__comp---site-src-pages-submit-tsx-8-af-8d2": [() => import(/* webpackChunkName: "__comp---site-src-pages-submit-tsx-8-af-8d2" */ "@site/src/pages/submit.tsx"), "@site/src/pages/submit.tsx", require.resolveWeak("@site/src/pages/submit.tsx")],
   "__comp---theme-blog-archive-page-9-e-4-1d8": [() => import(/* webpackChunkName: "__comp---theme-blog-archive-page-9-e-4-1d8" */ "@theme/BlogArchivePage"), "@theme/BlogArchivePage", require.resolveWeak("@theme/BlogArchivePage")],
   "__comp---theme-blog-list-pagea-6-a-7ba": [() => import(/* webpackChunkName: "__comp---theme-blog-list-pagea-6-a-7ba" */ "@theme/BlogListPage"), "@theme/BlogListPage", require.resolveWeak("@theme/BlogListPage")],

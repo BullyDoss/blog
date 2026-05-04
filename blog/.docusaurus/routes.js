@@ -43,11 +43,6 @@ export default [
     exact: true
   },
   {
-    path: '/admin',
-    component: ComponentCreator('/admin', '8d3'),
-    exact: true
-  },
-  {
     path: '/archive',
     component: ComponentCreator('/archive', '51a'),
     exact: true
