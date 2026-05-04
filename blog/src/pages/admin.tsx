@@ -228,15 +228,15 @@ function LoginForm({ onSuccess }: { onSuccess: (token: string) => void }) {
         <div style={{
           marginTop: '1.5rem',
           padding: '1rem',
-          background: '#f0f9ff',
+          background: '#f0fdf4',
           borderRadius: 8,
           fontSize: '0.85rem',
-          color: '#0369a1',
+          color: '#166534',
           lineHeight: 1.6,
         }}>
-          💡 <strong>提示：</strong><br/>
-          默认账号：<code style={{ background: '#e0f2fe', padding: '2px 6px', borderRadius: 4 }}>admin</code><br/>
-          默认密码：<code style={{ background: '#e0f2fe', padding: '2px 6px', borderRadius: 4 }}>admin123</code>
+          🔒 安全提示：<br/>
+          此登录页面连接到 Cloudflare Workers 后端 API<br/>
+          请使用管理员账号登录
         </div>
       </div>
     </div>
