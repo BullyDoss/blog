@@ -45,16 +45,16 @@ async function handleAPI(request, env) {
         return adminLogin(request, env, corsHeaders);
       
       case 'GET /api/admin/posts':
-        return verifyToken(request).then(() => getAdminPosts(env, corsHeaders));
+        return verifyToken(request, env).then(() => getAdminPosts(env, corsHeaders));
       
       case 'POST /api/admin/posts':
-        return verifyToken(request).then(() => createAdminPost(request, env, corsHeaders));
+        return verifyToken(request, env).then(() => createAdminPost(request, env, corsHeaders));
       
       case 'PUT /api/admin/posts/:id':
-        return verifyToken(request).then(() => updateAdminPost(url, request, env, corsHeaders));
+        return verifyToken(request, env).then(() => updateAdminPost(url, request, env, corsHeaders));
       
       case 'DELETE /api/admin/posts/:id':
-        return verifyToken(request).then(() => deleteAdminPost(url, env, corsHeaders));
+        return verifyToken(request, env).then(() => deleteAdminPost(url, env, corsHeaders));
 
       default:
         return jsonResponse({ error: 'Not Found' }, 404, corsHeaders);
@@ -151,6 +151,8 @@ async function uploadImage(request, env, headers) {
   return jsonResponse({ url, message: '上传成功' }, 201, headers);
 }
 
+// ===================== 认证相关 =====================
+
 async function adminLogin(request, env, headers) {
   const { username, password } = await request.json();
 
@@ -158,28 +160,23 @@ async function adminLogin(request, env, headers) {
     return jsonResponse({ error: '用户名和密码不能为空' }, 400, headers);
   }
 
-  const user = await env.DB.prepare(
-    'SELECT * FROM users WHERE username = ?'
-  ).bind(username).first();
+  // 从环境变量读取管理员账号密码
+  const adminUser = env.ADMIN_USERNAME || 'admin';
+  const adminPass = env.ADMIN_PASSWORD || 'admin123456';
 
-  if (!user) {
-    return jsonResponse({ error: '用户名或密码错误' }, 401, headers);
-  }
-
-  const validPassword = await verifyPassword(password, user.password_hash);
-  if (!validPassword) {
+  if (username !== adminUser || password !== adminPass) {
     return jsonResponse({ error: '用户名或密码错误' }, 401, headers);
   }
 
   const token = await generateJWT(
-    { userId: user.id, username: user.username },
-    env.JWT_SECRET
+    { userId: 1, username: adminUser },
+    env.JWT_SECRET || 'default-secret-change-me'
   );
 
   return jsonResponse({ token, message: '登录成功' }, 200, headers);
 }
 
-async function verifyToken(request) {
+async function verifyToken(request, env) {
   const authHeader = request.headers.get('Authorization');
   const token = authHeader?.split(' ')[1];
 
@@ -187,14 +184,64 @@ async function verifyToken(request) {
     throw new Error('未提供认证令牌');
   }
 
-  // 简化版验证（生产环境应使用完整的 JWT 库）
-  const payload = JSON.parse(atob(token.split('.')[1]));
-  if (payload.exp < Date.now() / 1000) {
-    throw new Error('令牌已过期');
-  }
+  try {
+    const secret = env.JWT_SECRET || 'default-secret-change-me';
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      throw new Error('令牌格式无效');
+    }
 
-  return payload;
+    const payload = JSON.parse(atob(parts[1]));
+    
+    // 验证签名
+    const expectedSignature = await generateSignature(parts[0], parts[1], secret);
+    if (parts[2] !== expectedSignature) {
+      throw new Error('令牌签名无效');
+    }
+
+    // 验证过期
+    if (payload.exp < Math.floor(Date.now() / 1000)) {
+      throw new Error('令牌已过期');
+    }
+
+    return payload;
+  } catch (err) {
+    throw new Error(`认证失败: ${err.message}`);
+  }
 }
+
+async function generateJWT(payload, secret) {
+  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+  const data = btoa(JSON.stringify({
+    ...payload,
+    exp: Math.floor(Date.now() / 1000) + 24 * 60 * 60, // 24小时过期
+    iat: Math.floor(Date.now() / 1000),
+  }));
+  const signature = await generateSignature(header, data, secret);
+  return `${header}.${data}.${signature}`;
+}
+
+async function generateSignature(header, data, secret) {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const signature = await crypto.subtle.sign(
+    'HMAC',
+    key,
+    encoder.encode(`${header}.${data}`)
+  );
+  return btoa(String.fromCharCode(...new Uint8Array(signature)))
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
+}
+
+// ===================== 后台管理 =====================
 
 async function getAdminPosts(env, headers) {
   const result = await env.DB.prepare(
@@ -245,6 +292,8 @@ async function deleteAdminPost(url, env, headers) {
   return jsonResponse({ message: '删除成功' }, 200, headers);
 }
 
+// ===================== 工具函数 =====================
+
 function jsonResponse(data, status = 200, headers = {}) {
   return new Response(JSON.stringify(data), {
     status,
@@ -263,21 +312,4 @@ function generateSlug(title) {
     .replace(/[\s_]+/g, '-')
     .replace(/-+/g, '-')
     .substring(0, 80);
-}
-
-async function verifyPassword(password, hash) {
-  // 简化版 - 生产环境应使用 bcrypt
-  // 这里需要引入 Web Crypto API 或兼容库
-  return password === 'admin123'; // 仅演示用
-}
-
-async function generateJWT(payload, secret) {
-  // 简化版 JWT - 生产环境应使用完整实现
-  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-  const data = btoa(JSON.stringify({
-    ...payload,
-    exp: Math.floor(Date.now() / 1000) + 24 * 60 * 60,
-  }));
-  const signature = btoa(`${header}.${data}.${secret}`);
-  return `${header}.${data}.${signature}`;
 }
