@@ -1,4 +1,4 @@
-import { jsonResponse, corsHeaders, verifyPassword, generateJWT } from '../_lib.js';
+import { jsonResponse, corsHeaders, verifyPassword, generateJWT } from '../../_lib.js';
 
 export async function onRequestPost(context) {
   const { request, env } = context;
