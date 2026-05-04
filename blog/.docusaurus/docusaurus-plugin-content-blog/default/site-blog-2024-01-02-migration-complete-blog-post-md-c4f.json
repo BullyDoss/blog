@@ -1,0 +1,50 @@
+{
+  "permalink": "/example-post",
+  "source": "@site/blog/2024-01-02-migration-complete/blog-post.md",
+  "title": "示例文章：技术栈迁移完成",
+  "description": "这是一篇示例文章，用于演示新博客系统的功能。",
+  "date": "2024-01-02T00:00:00.000Z",
+  "tags": [
+    {
+      "inline": true,
+      "label": "教程",
+      "permalink": "/tags/教程"
+    },
+    {
+      "inline": true,
+      "label": "Cloudflare",
+      "permalink": "/tags/cloudflare"
+    },
+    {
+      "inline": true,
+      "label": "Docusaurus",
+      "permalink": "/tags/docusaurus"
+    }
+  ],
+  "readingTime": 1.56,
+  "hasTruncateMarker": false,
+  "authors": [
+    {
+      "name": "Helloworld",
+      "title": "技术博主",
+      "key": null,
+      "page": null
+    }
+  ],
+  "frontMatter": {
+    "slug": "example-post",
+    "title": "示例文章：技术栈迁移完成",
+    "author": "Helloworld",
+    "author_title": "技术博主",
+    "tags": [
+      "教程",
+      "Cloudflare",
+      "Docusaurus"
+    ]
+  },
+  "unlisted": false,
+  "nextItem": {
+    "title": "欢迎来到 Helloworld 的笔记",
+    "permalink": "/welcome"
+  }
+}

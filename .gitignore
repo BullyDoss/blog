@@ -1,11 +1,17 @@
 node_modules/
-dist/
-.env
-uploads/
-*.log
+build/
 .DS_Store
-Thumbs.db
-blog-frontend/node_modules/
-blog-frontend/dist/
-blog-backend/node_modules/
-blog-backend/uploads/
+*.log
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Worker
+worker/.wrangler/
+worker/dist/
+
+# Misc
+.vercel
+.netlify

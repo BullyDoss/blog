@@ -10,7 +10,7 @@ export default {
   components: { PostDetail },
   data() {
     return {
-      config: { title: '夸夸其谈', desc: '分享生活，记录瞬间' },
+      config: { title: '生活碎片', desc: '分享生活，记录瞬间' },
     };
   },
 };

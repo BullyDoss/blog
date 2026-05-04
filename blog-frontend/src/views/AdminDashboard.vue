@@ -55,7 +55,7 @@
             <select v-model="formData.category">
               <option value="notes">学习笔记</option>
               <option value="brainstorm">思维风暴</option>
-              <option value="chat">夸夸其谈</option>
+              <option value="chat">生活碎片</option>
               <option value="daily">投稿专区</option>
               <option value="submit">我要投稿</option>
             </select>
@@ -131,7 +131,7 @@ export default {
   methods: {
     getAuthHeaders() { return { Authorization: 'Bearer ' + this.token } },
     categoryName(c) {
-      const m = { notes: '学习笔记', brainstorm: '思维风暴', chat: '夸夸其谈', daily: '投稿专区', submit: '我要投稿' }
+      const m = { notes: '学习笔记', brainstorm: '思维风暴', chat: '生活碎片', daily: '投稿专区', submit: '我要投稿' }
       return m[c] || c
     },
 
@@ -207,7 +207,7 @@ export default {
       if (!this.postToDelete) return
       this.deleting = true
       try {
-        await axios.delete('http://localhost:3000/api/admin/posts/' + this.postToDelete.id), { headers: this.getAuthHeaders() })
+        await axios.delete('http://localhost:3000/api/admin/posts/' + this.postToDelete.id), { headers: this.getAuthHeaders() }
         this.showDeleteDialog = false; this.postToDelete = null; this.fetchPosts()
       } catch (e) { alert('删除失败') } finally { this.deleting = false }
     },

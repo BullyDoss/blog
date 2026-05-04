@@ -51,7 +51,7 @@ export default {
   },
   methods: {
     categoryLabel(c) {
-      const m = { notes: '学习笔记', brainstorm: '思维风暴', chat: '夸夸其谈', daily: '投稿专区', submit: '我要投稿' }
+      const m = { notes: '学习笔记', brainstorm: '思维风暴', chat: '生活碎片', daily: '投稿专区', submit: '我要投稿' }
       return m[c] || c
     },
     formatDate(d) {

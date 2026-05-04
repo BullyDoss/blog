@@ -58,7 +58,7 @@ export default {
       channels: [
         { key: 'notes', label: '学习笔记' },
         { key: 'brainstorm', label: '思维风暴' },
-        { key: 'chat', label: '夸夸其谈' },
+        { key: 'chat', label: '生活碎片' },
         { key: 'daily', label: '投稿专区' },
         { key: 'submit', label: '我要投稿' },
       ],

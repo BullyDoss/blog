@@ -1,0 +1,283 @@
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+
+    if (url.pathname.startsWith('/api/')) {
+      return handleAPI(request, env);
+    }
+
+    return new Response('Not Found', { status: 404 });
+  },
+
+  async scheduled(event, env, ctx) {
+    console.log('Cron job triggered:', event.cron);
+  },
+};
+
+async function handleAPI(request, env) {
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': env.CORS_ORIGIN || '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  };
+
+  if (request.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const url = new URL(request.url);
+    
+    switch (`${request.method} ${url.pathname}`) {
+      case 'GET /api/posts':
+        return getPosts(url, env, corsHeaders);
+      
+      case 'GET /api/posts/:slug':
+        return getPostBySlug(url, env, corsHeaders);
+      
+      case 'POST /api/submit':
+        return submitPost(request, env, corsHeaders);
+      
+      case 'POST /api/images/upload':
+        return uploadImage(request, env, corsHeaders);
+      
+      case 'POST /api/admin/login':
+        return adminLogin(request, env, corsHeaders);
+      
+      case 'GET /api/admin/posts':
+        return verifyToken(request).then(() => getAdminPosts(env, corsHeaders));
+      
+      case 'POST /api/admin/posts':
+        return verifyToken(request).then(() => createAdminPost(request, env, corsHeaders));
+      
+      case 'PUT /api/admin/posts/:id':
+        return verifyToken(request).then(() => updateAdminPost(url, request, env, corsHeaders));
+      
+      case 'DELETE /api/admin/posts/:id':
+        return verifyToken(request).then(() => deleteAdminPost(url, env, corsHeaders));
+
+      default:
+        return jsonResponse({ error: 'Not Found' }, 404, corsHeaders);
+    }
+  } catch (err) {
+    console.error('API Error:', err);
+    return jsonResponse({ error: 'Internal Server Error' }, 500, corsHeaders);
+  }
+}
+
+async function getPosts(url, env, headers) {
+  const category = url.searchParams.get('category');
+  
+  let sql = `SELECT id, slug, title, excerpt, category, status, created_at 
+             FROM posts WHERE status = 'published'`;
+  const params = [];
+
+  if (category && ['notes', 'brainstorm', 'chat', 'daily', 'submit'].includes(category)) {
+    sql += ' AND category = ?';
+    params.push(category);
+  }
+
+  sql += ' ORDER BY created_at DESC';
+
+  const result = await env.DB.prepare(sql).bind(...params).all();
+  return jsonResponse(result.results, 200, headers);
+}
+
+async function getPostBySlug(url, env, headers) {
+  const slug = url.pathname.split('/').pop();
+  const result = await env.DB.prepare(
+    'SELECT * FROM posts WHERE slug = ? AND status = ?'
+  ).bind(slug, 'published').first();
+
+  if (!result) {
+    return jsonResponse({ error: '文章不存在' }, 404, headers);
+  }
+
+  const images = await env.DB.prepare(
+    'SELECT * FROM images WHERE post_id = ? ORDER BY sort_order ASC'
+  ).bind(result.id).all();
+
+  return jsonResponse({ ...result, images: images.results }, 200, headers);
+}
+
+async function submitPost(request, env, headers) {
+  const body = await request.json();
+  const { title, author, content, email, category = 'submit' } = body;
+
+  if (!title || !author || !content) {
+    return jsonResponse({ error: '请填写必要信息' }, 400, headers);
+  }
+
+  const slug = generateSlug(title);
+  const excerpt = content.length > 150 ? content.slice(0, 150) + '...' : content;
+
+  const result = await env.DB.prepare(
+    `INSERT INTO posts (slug, title, content, excerpt, category, status, author, email)
+     VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)`
+  ).bind(slug, title, content, excerpt, category, author, email).run();
+
+  return jsonResponse(
+    { id: result.meta.last_row_id, message: '投稿成功，等待审核' },
+    201,
+    headers
+  );
+}
+
+async function uploadImage(request, env, headers) {
+  const formData = await request.formData();
+  const file = formData.get('image');
+
+  if (!file || !(file instanceof File)) {
+    return jsonResponse({ error: '请选择图片' }, 400, headers);
+  }
+
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+  if (!allowedTypes.includes(file.type)) {
+    return jsonResponse({ error: '仅支持 JPG/PNG/GIF/WebP 格式' }, 400, headers);
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    return jsonResponse({ error: '图片大小不能超过 5MB' }, 400, headers);
+  }
+
+  const ext = file.name.split('.').pop() || 'jpg';
+  const key = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+
+  await env.IMAGES.put(key, file.stream(), {
+    httpMetadata: { contentType: file.type },
+  });
+
+  const url = `${env.R2_PUBLIC_URL}/${key}`;
+  return jsonResponse({ url, message: '上传成功' }, 201, headers);
+}
+
+async function adminLogin(request, env, headers) {
+  const { username, password } = await request.json();
+
+  if (!username || !password) {
+    return jsonResponse({ error: '用户名和密码不能为空' }, 400, headers);
+  }
+
+  const user = await env.DB.prepare(
+    'SELECT * FROM users WHERE username = ?'
+  ).bind(username).first();
+
+  if (!user) {
+    return jsonResponse({ error: '用户名或密码错误' }, 401, headers);
+  }
+
+  const validPassword = await verifyPassword(password, user.password_hash);
+  if (!validPassword) {
+    return jsonResponse({ error: '用户名或密码错误' }, 401, headers);
+  }
+
+  const token = await generateJWT(
+    { userId: user.id, username: user.username },
+    env.JWT_SECRET
+  );
+
+  return jsonResponse({ token, message: '登录成功' }, 200, headers);
+}
+
+async function verifyToken(request) {
+  const authHeader = request.headers.get('Authorization');
+  const token = authHeader?.split(' ')[1];
+
+  if (!token) {
+    throw new Error('未提供认证令牌');
+  }
+
+  // 简化版验证（生产环境应使用完整的 JWT 库）
+  const payload = JSON.parse(atob(token.split('.')[1]));
+  if (payload.exp < Date.now() / 1000) {
+    throw new Error('令牌已过期');
+  }
+
+  return payload;
+}
+
+async function getAdminPosts(env, headers) {
+  const result = await env.DB.prepare(
+    'SELECT * FROM posts ORDER BY created_at DESC'
+  ).all();
+  return jsonResponse(result.results, 200, headers);
+}
+
+async function createAdminPost(request, env, headers) {
+  const body = await request.json();
+  const { slug, title, content, excerpt, category = 'notes' } = body;
+
+  if (!slug || !title || !content) {
+    return jsonResponse({ error: '标题、slug 和内容不能为空' }, 400, headers);
+  }
+
+  const result = await env.DB.prepare(
+    `INSERT INTO posts (slug, title, content, excerpt, category, status)
+     VALUES (?, ?, ?, ?, ?, 'published')`
+  ).bind(slug, title, content, excerpt, category).run();
+
+  return jsonResponse(
+    { id: result.meta.last_row_id, message: '创建成功' },
+    201,
+    headers
+  );
+}
+
+async function updateAdminPost(url, request, env, headers) {
+  const id = url.pathname.split('/').pop();
+  const body = await request.json();
+  const { title, content, excerpt, slug, category } = body;
+
+  await env.DB.prepare(
+    `UPDATE posts SET title = ?, content = ?, excerpt = ?, slug = ?, category = ?
+     WHERE id = ?`
+  ).bind(title, content, excerpt, slug, category, id).run();
+
+  return jsonResponse({ message: '更新成功' }, 200, headers);
+}
+
+async function deleteAdminPost(url, env, headers) {
+  const id = url.pathname.split('/').pop();
+
+  await env.DB.prepare('DELETE FROM images WHERE post_id = ?').bind(id).run();
+  await env.DB.prepare('DELETE FROM posts WHERE id = ?').bind(id).run();
+
+  return jsonResponse({ message: '删除成功' }, 200, headers);
+}
+
+function jsonResponse(data, status = 200, headers = {}) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      'Content-Type': 'application/json',
+      ...headers,
+    },
+  });
+}
+
+function generateSlug(title) {
+  return title
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/[\s_]+/g, '-')
+    .replace(/-+/g, '-')
+    .substring(0, 80);
+}
+
+async function verifyPassword(password, hash) {
+  // 简化版 - 生产环境应使用 bcrypt
+  // 这里需要引入 Web Crypto API 或兼容库
+  return password === 'admin123'; // 仅演示用
+}
+
+async function generateJWT(payload, secret) {
+  // 简化版 JWT - 生产环境应使用完整实现
+  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+  const data = btoa(JSON.stringify({
+    ...payload,
+    exp: Math.floor(Date.now() / 1000) + 24 * 60 * 60,
+  }));
+  const signature = btoa(`${header}.${data}.${secret}`);
+  return `${header}.${data}.${signature}`;
+}

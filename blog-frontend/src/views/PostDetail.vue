@@ -51,31 +51,20 @@
         <!-- 正文 -->
         <div class="post-body" v-html="renderedContent"></div>
 
-        <!-- 评论 -->
+        <!-- 评论 (GitHub 登录评论) -->
         <section class="comments-section">
-          <h2>评论 ({{ comments.length }})</h2>
+          <h2>评论区</h2>
+          <p class="comments-hint">使用 GitHub 账号登录后即可参与讨论</p>
 
-          <div v-if="comments.length > 0" class="comments-list">
-            <div v-for="c in comments" :key="c.id" class="comment-item">
-              <div class="comment-avatar">{{ c.author.charAt(0).toUpperCase() }}</div>
-              <div class="comment-body">
-                <div class="comment-header">
-                  <strong>{{ c.author }}</strong>
-                  <span>{{ new Date(c.created_at).toLocaleString() }}</span>
-                </div>
-                <p>{{ c.content }}</p>
-              </div>
-            </div>
-          </div>
-          <div v-else class="no-comments">暂无评论</div>
-
-          <form @submit.prevent="submitComment" class="comment-form">
-            <input type="text" v-model="newComment.author" placeholder="昵称" required />
-            <textarea v-model="newComment.content" placeholder="写下你的想法..." rows="3" required></textarea>
-            <button type="submit" :disabled="submitting">{{ submitting ? '提交中...' : '发布' }}</button>
-            <div v-if="errorMsg" class="error-msg">{{ errorMsg }}</div>
-            <div v-if="successMsg" class="success-msg">{{ successMsg }}</div>
-          </form>
+          <!-- 一体化评论组件（含图片工具） -->
+          <GiscusCommentSection
+            :repo="giscusConfig.repo"
+            :repo-id="giscusConfig.repoId"
+            :category-id="giscusConfig.categoryId"
+            :mapping="giscusConfig.mapping"
+            :theme="giscusConfig.theme"
+            :reactions-enabled="giscusConfig.reactionsEnabled"
+          />
         </section>
       </article>
     </template>
@@ -85,9 +74,11 @@
 <script>
 import axios from 'axios';
 import { marked } from 'marked';
+import GiscusCommentSection from '@/components/GiscusCommentSection.vue';
 
 export default {
   name: 'PostDetail',
+  components: { GiscusCommentSection },
   props: {
     channelKey: { type: String, required: true },
     channelConfig: { type: Object, required: true },
@@ -97,12 +88,15 @@ export default {
       posts: [],
       selectedPost: null,
       images: [],
-      comments: [],
       loading: false,
-      newComment: { author: '', content: '' },
-      submitting: false,
-      errorMsg: '',
-      successMsg: '',
+      giscusConfig: {
+        repo: 'BullyDoss/blog',
+        repoId: 'R_kgDOSSGQ7g',
+        categoryId: 'DIC_kwDOSSGQ7s4C8LJx',
+        mapping: 'pathname',
+        theme: 'light',
+        reactionsEnabled: '0',
+      },
     };
   },
   computed: {
@@ -151,42 +145,17 @@ export default {
 
     async loadPost(slug) {
       this.loading = true;
-      this.errorMsg = '';
       try {
         const postRes = await axios.get(`http://localhost:3000/api/posts/${slug}`);
         this.selectedPost = postRes.data;
 
-        const [imgRes, commentRes] = await Promise.all([
-          axios.get(`http://localhost:3000/api/posts/${this.selectedPost.id}/images`),
-          axios.get(`http://localhost:3000/api/posts/${this.selectedPost.id}/comments`),
-        ]);
+        const imgRes = await axios.get(`http://localhost:3000/api/posts/${this.selectedPost.id}/images`);
         this.images = imgRes.data;
-        this.comments = commentRes.data;
       } catch (err) {
         console.error('加载文章失败:', err);
-        this.errorMsg = '加载失败';
       } finally {
         this.loading = false;
       }
-    },
-
-    async submitComment() {
-      if (!this.newComment.author.trim() || !this.newComment.content.trim()) {
-        this.errorMsg = '请填写完整'; return;
-      }
-      this.submitting = true; this.errorMsg = ''; this.successMsg = '';
-      try {
-        await axios.post(`http://localhost:3000/api/posts/${this.selectedPost.id}/comments`, {
-          author: this.newComment.author, content: this.newComment.content
-        });
-        this.successMsg = '评论成功';
-        this.newComment = { author: '', content: '' };
-        const res = await axios.get(`http://localhost:3000/api/posts/${this.selectedPost.id}/comments`);
-        this.comments = res.data;
-        setTimeout(() => { this.successMsg = ''; }, 3000);
-      } catch (err) {
-        this.errorMsg = err.response?.data?.message || '失败';
-      } finally { this.submitting = false; }
     },
   },
   mounted() {
@@ -251,31 +220,11 @@ export default {
 .post-body :deep(a) { color: #111; text-decoration: underline; text-underline-offset: 2px; }
 
 .comments-section { margin-top: 48px; padding-top: 28px; border-top: 1px solid #eee; }
-.comments-section h2 { font-size: 18px; color: #111; margin-bottom: 18px; font-weight: 600; }
-
-.comment-item { display: flex; gap: 12px; padding: 16px 0; border-bottom: 1px solid #f5f5f5; }
-.comment-item:last-child { border-bottom: none; }
-.comment-avatar { width: 34px; height: 34px; border-radius: 50%; background: #222; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 13px; flex-shrink: 0; }
-.comment-body { flex: 1; min-width: 0; }
-.comment-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
-.comment-header strong { color: #111; font-size: 13px; }
-.comment-header span { color: #bbb; font-size: 11px; }
-.comment-body p { margin: 0; line-height: 1.6; color: #555; font-size: 14px; }
-
-.no-comments { text-align: center; color: #bbb; padding: 36px; background: #fafafa; border-radius: 6px; margin-bottom: 20px; font-size: 14px; }
-
-.comment-form { background: #fafafa; padding: 22px; border-radius: 8px; border: 1px solid #eee; margin-top: 20px; }
-.comment-form input, .comment-form textarea { width: 100%; padding: 11px 14px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box; font-family: inherit; margin-bottom: 10px; transition: all .2s; background: #fff; color: #333; }
-.comment-form input:focus, .comment-form textarea:focus { outline: none; border-color: #888; box-shadow: 0 0 0 2px rgba(0,0,0,.04); }
-.comment-form button { background: #111; color: #fff; border: none; padding: 11px 28px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; transition: background .2s; }
-.comment-form button:hover:not(:disabled) { background: #333; }
-.comment-form button:disabled { opacity: .4; cursor: not-allowed; }
-.error-msg { color: #d00; margin-top: 8px; font-size: 13px; padding: 8px 12px; background: #fef2f2; border: 1px solid #fee2e2; border-radius: 5px; }
-.success-msg { color: #16a34a; margin-top: 8px; font-size: 13px; padding: 8px 12px; background: #f0fdf4; border: 1px solid #dcfce7; border-radius: 5px; }
+.comments-section h2 { font-size: 18px; color: #111; margin-bottom: 8px; font-weight: 600; }
+.comments-hint { font-size: 13px; color: #888; margin-bottom: 20px; }
 
 @media (max-width: 768px) {
   .channel-home { padding: 20px 16px 40px; }
   .post-title { font-size: 24px; }
-  .comment-item { flex-direction: column; gap: 8px; }
 }
 </style>
