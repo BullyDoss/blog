@@ -53,6 +53,13 @@
     "sidebar": "sidebar---2024-01-01-welcome-814-228",
     "content": "content---2024-01-01-welcomef-1-d-02c"
   },
+  "/admin-8d3": {
+    "__comp": "__comp---site-src-pages-admin-tsx-049-57e",
+    "__context": {
+      "plugin": "plugin---admina-74-c62"
+    },
+    "config": "config---admin-5-e-9-2d8"
+  },
   "/archive-51a": {
     "__comp": "__comp---theme-blog-archive-page-9-e-4-1d8",
     "__context": {

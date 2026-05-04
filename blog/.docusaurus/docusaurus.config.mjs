@@ -8,8 +8,8 @@ export default {
   "tagline": "学习笔记 · 思维风暴 · 生活碎片",
   "url": "https://your-blog.pages.dev",
   "baseUrl": "/",
-  "onBrokenLinks": "throw",
-  "organizationName": "your-github-username",
+  "onBrokenLinks": "warn",
+  "organizationName": "BullyDoss",
   "projectName": "blog",
   "trailingSlash": false,
   "i18n": {
@@ -25,8 +25,8 @@ export default {
     "path": "i18n"
   },
   "customFields": {
-    "apiBaseUrl": "https://api.your-domain.com",
-    "r2BucketUrl": "https://pub-your-bucket-id.r2.dev"
+    "apiBaseUrl": "https://blog-api.bullydoss-blog.workers.dev",
+    "r2BucketUrl": "https://pub-xxxxx.r2.dev"
   },
   "presets": [
     [
@@ -56,29 +56,9 @@ export default {
       },
       "items": [
         {
-          "to": "/notes",
-          "label": "学习笔记",
+          "to": "/",
+          "label": "首页",
           "position": "left"
-        },
-        {
-          "to": "/brainstorm",
-          "label": "思维风暴",
-          "position": "left"
-        },
-        {
-          "to": "/chat",
-          "label": "生活碎片",
-          "position": "left"
-        },
-        {
-          "to": "/daily",
-          "label": "投稿专区",
-          "position": "left"
-        },
-        {
-          "to": "/submit",
-          "label": "我要投稿",
-          "position": "right"
         }
       ],
       "hideOnScroll": false
@@ -109,19 +89,6 @@ export default {
           }
         }
       ]
-    },
-    "giscus": {
-      "repo": "YOUR_GITHUB_USERNAME/YOUR_REPO_NAME",
-      "repoId": "YOUR_REPO_ID",
-      "category": "Announcements",
-      "categoryId": "YOUR_CATEGORY_ID",
-      "mapping": "pathname",
-      "strict": true,
-      "reactionsEnabled": true,
-      "emitMetadata": false,
-      "inputPosition": "top",
-      "lang": "zh-CN",
-      "loading": "lazy"
     },
     "colorMode": {
       "defaultMode": "light",

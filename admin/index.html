@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>博客管理后台</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #333; }
+    .container { max-width: 1200px; margin: 2rem auto; padding: 0 1rem; }
+    
+    /* Login */
+    .login-box { max-width: 400px; margin: 10vh auto; background: white; padding: 2.5rem; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
+    .login-box h1 { text-align: center; margin-bottom: 2rem; color: #2563eb; }
+    .login-box input { width: 100%; padding: 14px 16px; margin-bottom: 1rem; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 1rem; }
+    .login-box button { width: 100%; padding: 14px; background: #2563eb; color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .login-box button:hover { background: #1d4ed8; transform: translateY(-1px); }
+    
+    /* Dashboard */
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 2px solid #e5e7eb; }
+    .header h1 { color: #2563eb; }
+    .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: 500; font-size: 0.9rem; transition: all 0.2s; }
+    .btn-primary { background: #2563eb; color: white; }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-danger { background: #ef4444; color: white; }
+    .btn-danger:hover { background: #dc2626; }
+    .btn-success { background: #10b981; color: white; }
+    .btn-success:hover { background: #059669; }
+    
+    table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    th, td { padding: 14px 18px; text-align: left; border-bottom: 1px solid #f3f4f6; }
+    th { background: #f9fafb; font-weight: 600; color: #374151; text-transform: uppercase; font-size: 0.85rem; }
+    tr:hover { background: #f9fafb; }
+    .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 500; }
+    .badge-published { background: #d1fae5; color: #065f46; }
+    .badge-pending { background: #fef3c7; color: #92400e; }
+    
+    .hidden { display: none; }
+    .error { color: #dc2626; background: #fee2e2; padding: 12px; border-radius: 8px; margin-bottom: 1rem; }
+    .success { color: #059669; background: #d1fae5; padding: 12px; border-radius: 8px; margin-bottom: 1rem; }
+    
+    .tabs { display: flex; gap: 1rem; margin-bottom: 2rem; border-bottom: 2px solid #e5e7eb; }
+    .tab { padding: 12px 24px; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s; font-weight: 500; }
+    .tab.active { border-bottom-color: #2563eb; color: #2563eb; }
+    .tab:hover { background: #f9fafb; }
+    
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    
+    textarea, input[type="text"] { width: 100%; padding: 10px 14px; border: 2px solid #e5e7eb; border-radius: 8px; font-family: inherit; font-size: 0.95rem; margin-bottom: 1rem; }
+    textarea { min-height: 200px; resize: vertical; }
+    
+    @media (max-width: 768px) {
+      .container { padding: 1rem 0.5rem; }
+      table { font-size: 0.85rem; }
+      th, td { padding: 10px 12px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Login Page -->
+  <div id="loginPage" class="container">
+    <div class="login-box">
+      <h1>🔐 管理员登录</h1>
+      <div id="loginError" class="error hidden"></div>
+      <form id="loginForm">
+        <input type="text" id="username" placeholder="用户名" required>
+        <input type="password" id="password" placeholder="密码" required>
+        <button type="submit">登录</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Dashboard -->
+  <div id="dashboard" class="container hidden">
+    <div class="header">
+      <h1>📝 博客管理后台</h1>
+      <button class="btn btn-danger" onclick="logout()">退出登录</button>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('posts')">📄 文章管理</div>
+      <div class="tab" onclick="switchTab('submissions')">✍️ 投稿审核</div>
+      <div class="tab" onclick="switchTab('create')">➕ 新建文章</div>
+    </div>
+
+    <!-- Posts Tab -->
+    <div id="postsTab" class="tab-content active">
+      <div id="message" class="hidden"></div>
+      <table>
+        <thead>
+          <tr><th>ID</th><th>标题</th><th>分类</th><th>状态</th><th>日期</th><th>操作</th></tr>
+        </thead>
+        <tbody id="postsList"></tbody>
+      </table>
+    </div>
+
+    <!-- Submissions Tab -->
+    <div id="submissionsTab" class="tab-content">
+      <h2 style="margin-bottom: 1rem;">待审核投稿</h2>
+      <table>
+        <thead>
+          <tr><th>ID</th><th>标题</th><th>作者</th><th>提交时间</th><th>操作</th></tr>
+        </thead>
+        <tbody id="submissionsList"></tbody>
+      </table>
+    </div>
+
+    <!-- Create Tab -->
+    <div id="createTab" class="tab-content">
+      <h2 style="margin-bottom: 1rem;">新建文章</h2>
+      <form id="createForm">
+        <input type="text" name="slug" placeholder="URL 别名 (如: my-new-post)" required>
+        <input type="text" name="title" placeholder="文章标题" required>
+        <select name="category">
+          <option value="notes">学习笔记</option>
+          <option value="brainstorm">思维风暴</option>
+          <option value="chat">生活碎片</option>
+          <option value="daily">投稿专区</option>
+        </select>
+        <textarea name="content" placeholder="文章内容 (支持 Markdown)" required></textarea>
+        <button type="submit" class="btn btn-success">发布文章</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = 'https://blog-api.bullydoss-blog.workers.dev';
+    let token = localStorage.getItem('admin_token');
+
+    // Check auth on load
+    if (token) {
+      showDashboard();
+    }
+
+    // Login
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+
+      try {
+        const res = await fetch(`${API_BASE}/api/admin/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+          token = data.token;
+          localStorage.setItem('admin_token', token);
+          showDashboard();
+        } else {
+          showError('loginError', data.error || '登录失败');
+        }
+      } catch (err) {
+        showError('loginError', '网络错误');
+      }
+    });
+
+    function showError(id, msg) {
+      const el = document.getElementById(id);
+      el.textContent = msg;
+      el.classList.remove('hidden');
+    }
+
+    function showMsg(msg, isSuccess = true) {
+      const el = document.getElementById('message');
+      el.textContent = msg;
+      el.className = isSuccess ? 'success' : 'error';
+      el.classList.remove('hidden');
+      setTimeout(() => el.classList.add('hidden'), 3000);
+    }
+
+    function showDashboard() {
+      document.getElementById('loginPage').classList.add('hidden');
+      document.getElementById('dashboard').classList.remove('hidden');
+      fetchPosts();
+    }
+
+    function logout() {
+      localStorage.removeItem('admin_token');
+      token = null;
+      document.getElementById('dashboard').classList.add('hidden');
+      document.getElementById('loginPage').classList.remove('hidden');
+    }
+
+    function switchTab(tab) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('hidden'));
+      
+      event.target.classList.add('active');
+      document.getElementById(tab + 'Tab').classList.add('active');
+
+      if (tab === 'posts') fetchPosts();
+      if (tab === 'submissions') fetchSubmissions();
+    }
+
+    async function fetchPosts() {
+      try {
+        const res = await fetch(`${API_BASE}/api/admin/posts`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const posts = await res.json();
+          renderPosts(posts);
+        } else if (res.status === 401 || res.status === 403) {
+          logout();
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function renderPosts(posts) {
+      const tbody = document.getElementById('postsList');
+      if (!posts.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#999;">暂无文章</td></tr>';
+        return;
+      }
+      tbody.innerHTML = posts.map(p => `
+        <tr>
+          <td>${p.id}</td>
+          <td>${p.title}</td>
+          <td>${p.category}</td>
+          <td><span class="badge badge-${p.status}">${p.status}</span></td>
+          <td>${new Date(p.created_at).toLocaleDateString()}</td>
+          <td><button class="btn btn-danger" onclick="deletePost(${p.id})">删除</button></td>
+        </tr>
+      `).join('');
+    }
+
+    async function deletePost(id) {
+      if (!confirm('确定删除？')) return;
+      try {
+        const res = await fetch(`${API_BASE}/api/admin/posts/${id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          showMsg('删除成功！');
+          fetchPosts();
+        } else {
+          showMsg('删除失败', false);
+        }
+      } catch (err) {
+        showMsg('网络错误', false);
+      }
+    }
+
+    async function fetchSubmissions() {
+      try {
+        const res = await fetch(`${API_BASE}/api/posts?status=pending`);
+        if (res.ok) {
+          const posts = await res.json();
+          renderSubmissions(posts);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function renderSubmissions(posts) {
+      const tbody = document.getElementById('submissionsList');
+      if (!posts.length) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999;">暂无投稿</td></tr>';
+        return;
+      }
+      tbody.innerHTML = posts.map(p => `
+        <tr>
+          <td>${p.id}</td>
+          <td>${p.title}</td>
+          <td>${p.author || '匿名'}</td>
+          <td>${new Date(p.created_at).toLocaleString()}</td>
+          <td>
+            <button class="btn btn-success" onclick="approvePost(${p.id})">通过</button>
+            <button class="btn btn-danger" onclick="deletePost(${p.id})">拒绝</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function approvePost(id) {
+      try {
+        const res = await fetch(`${API_BASE}/api/admin/posts/${id}`, {
+          method: 'PUT',
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ status: 'published' })
+        });
+        if (res.ok) {
+          showMsg('审核通过！文章已发布');
+          fetchSubmissions();
+        }
+      } catch (err) {
+        showMsg('操作失败', false);
+      }
+    }
+
+    // Create post
+    document.getElementById('createForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      const data = Object.fromEntries(formData);
+
+      try {
+        const res = await fetch(`${API_BASE}/api/admin/posts`, {
+          method: 'POST',
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(data)
+        });
+        if (res.ok) {
+          showMsg('文章创建成功！');
+          e.target.reset();
+        } else {
+          const err = await res.json();
+          showMsg(err.error || '创建失败', false);
+        }
+      } catch (err) {
+        showMsg('网络错误', false);
+      }
+    });
+  </script>
+</body>
+</html>
