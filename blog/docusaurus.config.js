@@ -2,7 +2,7 @@ module.exports = {
   title: 'Helloworld的笔记',
   tagline: '学习笔记 · 思维风暴 · 生活碎片',
 
-  url: 'https://your-blog.pages.dev',
+  url: 'https://c8a118ad.bullydoss.pages.dev',
   baseUrl: '/',
 
   onBrokenLinks: 'warn',
@@ -11,6 +11,10 @@ module.exports = {
   organizationName: 'BullyDoss',
   projectName: 'blog',
   trailingSlash: false,
+
+  clientModules: [
+    require.resolve('./src/client/config.js'),
+  ],
 
   i18n: {
     defaultLocale: 'zh-CN',
@@ -54,6 +58,7 @@ module.exports = {
       },
       items: [
         { to: '/', label: '首页', position: 'left' },
+        { to: '/admin', label: '管理后台', position: 'right' },
       ],
     },
     footer: {
