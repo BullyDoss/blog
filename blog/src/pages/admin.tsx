@@ -1,12 +1,11 @@
 import React from 'react';
 import BrowserOnly from '@docusaurus/BrowserOnly';
 import Layout from '@theme/Layout';
-import styles from './admin.module.css';
 
 export default function AdminPage(): React.ReactElement {
   return (
     <Layout title="管理后台" description="博客管理后台">
-      <BrowserOnly fallback={<div className={styles.loading}>加载管理后台...</div>}>
+      <BrowserOnly fallback={<div style={{ textAlign: 'center', padding: '4rem', color: '#666' }}>⏳ 加载中...</div>}>
         {() => <AdminDashboard />}
       </BrowserOnly>
     </Layout>
@@ -23,9 +22,7 @@ function AdminDashboard() {
   });
 
   React.useEffect(() => {
-    if (token) {
-      setView('dashboard');
-    }
+    if (token) setView('dashboard');
   }, [token]);
 
   const handleLoginSuccess = (newToken: string) => {
@@ -50,75 +47,197 @@ function AdminDashboard() {
 function LoginForm({ onSuccess }: { onSuccess: (token: string) => void }) {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState('');
+  const [username, setUsername] = React.useState('');
+  const [password, setPassword] = React.useState('');
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
-    const formData = new FormData(e.currentTarget);
-    const username = formData.get('username') as string;
-    const password = formData.get('password') as string;
-
     try {
-      const apiBase = (window as any).__CONFIG__?.apiBaseUrl || 'https://blog-api.bullydoss-blog.workers.dev';
+      const apiBase = 'https://blog-api.bullydoss-blog.workers.dev';
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+
       const response = await fetch(`${apiBase}/api/admin/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
+        signal: controller.signal,
       });
 
-      const data = await response.json();
+      clearTimeout(timeoutId);
 
-      if (response.ok) {
-        onSuccess(data.token);
-      } else {
-        setError(data.error || '登录失败');
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || `服务器错误 (${response.status})`);
       }
-    } catch (err) {
-      setError('网络错误，请检查连接');
+
+      const data = await response.json();
+      onSuccess(data.token);
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        setError('❌ 连接超时，请检查网络或 API 地址');
+      } else if (err.message.includes('fetch')) {
+        setError('❌ 无法连接到 API 服务器\n\n请确认：\n• Worker 是否已部署\n• API 地址是否正确：https://blog-api.bullydoss-blog.workers.dev');
+      } else {
+        setError(`❌ ${err.message}`);
+      }
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className={styles.loginContainer}>
-      <div className={styles.loginCard}>
-        <h2 className={styles.title}>🔐 管理员登录</h2>
-        <p className={styles.subtitle}>登录后可管理文章和审核投稿</p>
+    <div style={{
+      maxWidth: 420,
+      margin: '3rem auto',
+      padding: '0 1rem',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    }}>
+      <div style={{
+        background: '#ffffff',
+        borderRadius: 16,
+        padding: '2.5rem',
+        boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
+        border: '1px solid #e5e7eb',
+      }}>
+        <h2 style={{
+          fontSize: '1.75rem',
+          fontWeight: 700,
+          marginBottom: '0.5rem',
+          color: '#111827',
+          textAlign: 'center',
+        }}>
+          🔐 管理员登录
+        </h2>
         
-        {error && <div className={styles.error}>{error}</div>}
-        
-        <form onSubmit={handleSubmit} className={styles.form}>
-          <div className={styles.field}>
-            <label htmlFor="username">用户名</label>
+        <p style={{
+          textAlign: 'center',
+          color: '#6b7280',
+          marginBottom: '2rem',
+          fontSize: '0.95rem',
+        }}>
+          登录后可管理文章和审核投稿
+        </p>
+
+        {error && (
+          <div style={{
+            background: '#fef2f2',
+            border: '1px solid #fecaca',
+            color: '#dc2626',
+            padding: '14px 18px',
+            borderRadius: 10,
+            marginBottom: '1.5rem',
+            fontSize: '0.9rem',
+            lineHeight: 1.6,
+            whiteSpace: 'pre-line',
+          }}>
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom: '1.25rem' }}>
+            <label style={{
+              display: 'block',
+              fontWeight: 600,
+              fontSize: '0.9rem',
+              color: '#374151',
+              marginBottom: '0.5rem',
+            }}>
+              用户名
+            </label>
             <input
-              id="username"
-              name="username"
               type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               placeholder="请输入用户名"
               required
               disabled={loading}
+              style={{
+                width: '100%',
+                padding: '14px 16px',
+                border: '2px solid #e5e7eb',
+                borderRadius: 10,
+                fontSize: '1rem',
+                transition: 'border-color 0.2s',
+                boxSizing: 'border-box',
+                background: '#f9fafb',
+              }}
+              onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+              onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
             />
           </div>
-          
-          <div className={styles.field}>
-            <label htmlFor="password">密码</label>
+
+          <div style={{ marginBottom: '1.5rem' }}>
+            <label style={{
+              display: 'block',
+              fontWeight: 600,
+              fontSize: '0.9rem',
+              color: '#374151',
+              marginBottom: '0.5rem',
+            }}>
+              密码
+            </label>
             <input
-              id="password"
-              name="password"
               type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               placeholder="请输入密码"
               required
               disabled={loading}
+              style={{
+                width: '100%',
+                padding: '14px 16px',
+                border: '2px solid #e5e7eb',
+                borderRadius: 10,
+                fontSize: '1rem',
+                transition: 'border-color 0.2s',
+                boxSizing: 'border-box',
+                background: '#f9fafb',
+              }}
+              onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+              onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
             />
           </div>
-          
-          <button type="submit" className={styles.submitBtn} disabled={loading}>
-            {loading ? '登录中...' : '登 录'}
+
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              width: '100%',
+              padding: '16px',
+              background: loading ? '#9ca3af' : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+              color: 'white',
+              border: 'none',
+              borderRadius: 10,
+              fontSize: '1.05rem',
+              fontWeight: 700,
+              cursor: loading ? 'not-allowed' : 'pointer',
+              transition: 'all 0.3s ease',
+              boxShadow: loading ? 'none' : '0 4px 12px rgba(59, 130, 246, 0.35)',
+            }}
+          >
+            {loading ? '⏳ 登录中...' : '🚀 登 录'}
           </button>
         </form>
+
+        <div style={{
+          marginTop: '1.5rem',
+          padding: '1rem',
+          background: '#f0f9ff',
+          borderRadius: 8,
+          fontSize: '0.85rem',
+          color: '#0369a1',
+          lineHeight: 1.6,
+        }}>
+          💡 <strong>提示：</strong><br/>
+          默认账号：<code style={{ background: '#e0f2fe', padding: '2px 6px', borderRadius: 4 }}>admin</code><br/>
+          默认密码：<code style={{ background: '#e0f2fe', padding: '2px 6px', borderRadius: 4 }}>admin123</code>
+        </div>
       </div>
     </div>
   );
@@ -128,29 +247,74 @@ function AdminPanel({ token, onLogout }: { token: string; onLogout: () => void }
   const [activeTab, setActiveTab] = React.useState<'posts' | 'submissions'>('posts');
 
   return (
-    <div className={styles.adminContainer}>
-      <header className={styles.header}>
-        <h1>📊 管理后台</h1>
-        <button onClick={onLogout} className={styles.logoutBtn}>退出登录</button>
+    <div style={{
+      maxWidth: 1100,
+      margin: '2rem auto',
+      padding: '0 1.5rem',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    }}>
+      <header style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '2rem',
+        paddingBottom: '1.5rem',
+        borderBottom: '2px solid #e5e7eb',
+      }}>
+        <h1 style={{ fontSize: '2rem', margin: 0, color: '#111827' }}>
+          📊 管理后台
+        </h1>
+        <button
+          onClick={onLogout}
+          style={{
+            padding: '10px 24px',
+            background: '#ef4444',
+            color: 'white',
+            border: 'none',
+            borderRadius: 8,
+            cursor: 'pointer',
+            fontWeight: 600,
+            fontSize: '0.95rem',
+            boxShadow: '0 2px 8px rgba(239, 68, 68, 0.3)',
+          }}
+        >
+          🚪 退出登录
+        </button>
       </header>
 
-      <nav className={styles.tabs}>
-        <button
-          className={`${styles.tab} ${activeTab === 'posts' ? styles.active : ''}`}
-          onClick={() => setActiveTab('posts')}
-        >
-          📝 文章管理
-        </button>
-        <button
-          className={`${styles.tab} ${activeTab === 'submissions' ? styles.active : ''}`}
-          onClick={() => setActiveTab('submissions')}
-        >
-          📥 投稿审核
-        </button>
+      <nav style={{
+        display: 'flex',
+        gap: '0.5rem',
+        marginBottom: '2rem',
+        borderBottom: '2px solid #e5e7eb',
+      }}>
+        {(['posts', 'submissions'] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            style={{
+              padding: '14px 28px',
+              background: activeTab === tab ? '#eff6ff' : 'transparent',
+              border: 'none',
+              borderBottom: `3px solid ${activeTab === tab ? '#3b82f6' : 'transparent'}`,
+              fontSize: '1rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              color: activeTab === tab ? '#2563eb' : '#6b7280',
+              transition: 'all 0.2s',
+              marginBottom: -2,
+            }}
+          >
+            {tab === 'posts' ? '📝 文章管理' : '📥 投稿审核'}
+          </button>
+        ))}
       </nav>
 
-      <main className={styles.content}>
-        {activeTab === 'posts' ? <PostsManager token={token} /> : <SubmissionsManager token={token} />}
+      <main style={{ minHeight: 400 }}>
+        {activeTab === 'posts' 
+          ? <PostsManager token={token} /> 
+          : <SubmissionsManager token={token} />
+        }
       </main>
     </div>
   );
@@ -159,23 +323,28 @@ function AdminPanel({ token, onLogout }: { token: string; onLogout: () => void }
 function PostsManager({ token }: { token: string }) {
   const [posts, setPosts] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState('');
 
   const fetchPosts = async () => {
     setLoading(true);
+    setError('');
     try {
-      const apiBase = (window as any).__CONFIG__?.apiBaseUrl || 'https://blog-api.bullydoss-blog.workers.dev';
+      const apiBase = 'https://blog-api.bullydoss-blog.workers.dev';
       const response = await fetch(`${apiBase}/api/admin/posts`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         setPosts(data);
       } else if (response.status === 401 || response.status === 403) {
-        window.location.reload();
+        setError('登录已过期，请重新登录');
+        setTimeout(() => window.location.reload(), 2000);
+      } else {
+        setError(`获取文章失败 (${response.status})`);
       }
     } catch (err) {
-      console.error('获取文章失败:', err);
+      setError('网络错误，无法连接到 API');
     } finally {
       setLoading(false);
     }
@@ -189,7 +358,7 @@ function PostsManager({ token }: { token: string }) {
     if (!confirm('确定要删除这篇文章吗？此操作不可恢复！')) return;
 
     try {
-      const apiBase = (window as any).__CONFIG__?.apiBaseUrl || 'https://blog-api.bullydoss-blog.workers.dev';
+      const apiBase = 'https://blog-api.bullydoss-blog.workers.dev';
       const response = await fetch(`${apiBase}/api/admin/posts/${postId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
@@ -206,52 +375,171 @@ function PostsManager({ token }: { token: string }) {
     }
   };
 
-  if (loading) return <div className={styles.loading}>加载中...</div>;
+  if (loading) {
+    return (
+      <div style={{ textAlign: 'center', padding: '4rem', color: '#6b7280' }}>
+        ⏳ 加载中...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{
+        textAlign: 'center',
+        padding: '2rem',
+        background: '#fef2f2',
+        borderRadius: 12,
+        color: '#dc2626',
+      }}>
+        {error}
+        <br />
+        <button onClick={fetchPosts} style={{
+          marginTop: '1rem',
+          padding: '8px 20px',
+          background: '#dc2626',
+          color: 'white',
+          border: 'none',
+          borderRadius: 6,
+          cursor: 'pointer',
+        }}>
+          🔄 重试
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div>
-      <div className={styles.tableHeader}>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '1.5rem',
+        fontWeight: 600,
+        color: '#374151',
+      }}>
         <span>共 {posts.length} 篇文章</span>
-        <button onClick={fetchPosts} className={styles.refreshBtn}>🔄 刷新</button>
+        <button onClick={fetchPosts} style={{
+          padding: '8px 16px',
+          background: '#f3f4f6',
+          border: '1px solid #d1d5db',
+          borderRadius: 6,
+          cursor: 'pointer',
+          fontSize: '0.9rem',
+        }}>
+          🔄 刷新
+        </button>
       </div>
-      
-      <table className={styles.table}>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>标题</th>
-            <th>分类</th>
-            <th>状态</th>
-            <th>创建时间</th>
-            <th>操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          {posts.map(post => (
-            <tr key={post.id}>
-              <td>{post.id}</td>
-              <td>{post.title}</td>
-              <td><span className={styles.badge}>{post.category}</span></td>
-              <td>
-                <span className={`${styles.badge} ${post.status === 'published' ? styles.success : styles.warning}`}>
-                  {post.status === 'published' ? '已发布' : '待审核'}
-                </span>
-              </td>
-              <td>{new Date(post.created_at).toLocaleDateString('zh-CN')}</td>
-              <td>
-                <button
-                  onClick={() => deletePost(post.id)}
-                  className={styles.deleteBtn}
-                >
-                  🗑️ 删除
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
 
-      {posts.length === 0 && <p className={styles.empty}>暂无文章</p>}
+      <div style={{
+        background: 'white',
+        borderRadius: 12,
+        overflow: 'hidden',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+        border: '1px solid #e5e7eb',
+      }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ background: '#f9fafb' }}>
+              {['ID', '标题', '分类', '状态', '创建时间', '操作'].map((th) => (
+                <th key={th} style={{
+                  padding: '14px 18px',
+                  textAlign: 'left',
+                  fontWeight: 700,
+                  color: '#374151',
+                  fontSize: '0.85rem',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  borderBottom: '2px solid #e5e7eb',
+                }}>
+                  {th}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {posts.map((post) => (
+              <tr key={post.id} style={{
+                borderBottom: '1px solid #f3f4f6',
+                transition: 'background 0.15s',
+              }}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#f9fafb'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
+              >
+                <td style={{ padding: '14px 18px', color: '#6b7280' }}>{post.id}</td>
+                <td style={{ padding: '14px 18px', fontWeight: 500, color: '#111827' }}>{post.title}</td>
+                <td style={{ padding: '14px 18px' }}>
+                  <span style={{
+                    display: 'inline-block',
+                    padding: '4px 12px',
+                    borderRadius: 20,
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    background: '#f3f4f6',
+                    color: '#374151',
+                  }}>
+                    {post.category}
+                  </span>
+                </td>
+                <td style={{ padding: '14px 18px' }}>
+                  <span style={{
+                    display: 'inline-block',
+                    padding: '4px 12px',
+                    borderRadius: 20,
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    background: post.status === 'published' ? '#d1fae5' : '#fef3c7',
+                    color: post.status === 'published' ? '#065f46' : '#92400e',
+                  }}>
+                    {post.status === 'published' ? '✅ 已发布' : '⏳ 待审核'}
+                  </span>
+                </td>
+                <td style={{ padding: '14px 18px', color: '#6b7280', fontSize: '0.9rem' }}>
+                  {new Date(post.created_at).toLocaleDateString('zh-CN')}
+                </td>
+                <td style={{ padding: '14px 18px' }}>
+                  <button
+                    onClick={() => deletePost(post.id)}
+                    style={{
+                      padding: '8px 16px',
+                      background: '#fef2f2',
+                      color: '#dc2626',
+                      border: '1px solid #fecaca',
+                      borderRadius: 6,
+                      cursor: 'pointer',
+                      fontSize: '0.85rem',
+                      fontWeight: 600,
+                      transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = '#fee2e2';
+                      e.currentTarget.style.borderColor = '#fca5a5';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = '#fef2f2';
+                      e.currentTarget.style.borderColor = '#fecaca';
+                    }}
+                  >
+                    🗑️ 删除
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {posts.length === 0 && (
+        <div style={{
+          textAlign: 'center',
+          padding: '3rem',
+          color: '#9ca3af',
+          fontSize: '1.1rem',
+        }}>
+          📭 暂无文章
+        </div>
+      )}
     </div>
   );
 }
@@ -263,11 +551,11 @@ function SubmissionsManager({ token }: { token: string }) {
   const fetchSubmissions = async () => {
     setLoading(true);
     try {
-      const apiBase = (window as any).__CONFIG__?.apiBaseUrl || 'https://blog-api.bullydoss-blog.workers.dev';
+      const apiBase = 'https://blog-api.bullydoss-blog.workers.dev';
       const response = await fetch(`${apiBase}/api/admin/posts?status=pending`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         setSubmissions(data.filter((p: any) => p.status === 'pending'));
@@ -285,7 +573,7 @@ function SubmissionsManager({ token }: { token: string }) {
 
   const approvePost = async (postId: number) => {
     try {
-      const apiBase = (window as any).__CONFIG__?.apiBaseUrl || 'https://blog-api.bullydoss-blog.workers.dev';
+      const apiBase = 'https://blog-api.bullydoss-blog.workers.dev';
       const response = await fetch(`${apiBase}/api/admin/posts/${postId}`, {
         method: 'PUT',
         headers: {
@@ -304,29 +592,98 @@ function SubmissionsManager({ token }: { token: string }) {
     }
   };
 
-  if (loading) return <div className={styles.loading}>加载中...</div>;
+  if (loading) {
+    return <div style={{ textAlign: 'center', padding: '4rem', color: '#6b7280' }}>⏳ 加载中...</div>;
+  }
 
   return (
     <div>
-      <div className={styles.tableHeader}>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '1.5rem',
+        fontWeight: 600,
+        color: '#374151',
+      }}>
         <span>共 {submissions.length} 条待审核投稿</span>
-        <button onClick={fetchSubmissions} className={styles.refreshBtn}>🔄 刷新</button>
+        <button onClick={fetchSubmissions} style={{
+          padding: '8px 16px',
+          background: '#f3f4f6',
+          border: '1px solid #d1d5db',
+          borderRadius: 6,
+          cursor: 'pointer',
+          fontSize: '0.9rem',
+        }}>
+          🔄 刷新
+        </button>
       </div>
 
-      <div className={styles.submissionList}>
-        {submissions.map(sub => (
-          <div key={sub.id} className={styles.submissionCard}>
-            <h3>{sub.title}</h3>
-            <p className={styles.meta}>
-              作者：{sub.author || '匿名'} | 
-              提交时间：{new Date(sub.created_at).toLocaleDateString('zh-CN')}
+      <div style={{ display: 'grid', gap: '1.25rem' }}>
+        {submissions.map((sub) => (
+          <div key={sub.id} style={{
+            background: 'white',
+            border: '1px solid #e5e7eb',
+            borderRadius: 12,
+            padding: '1.5rem',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+            transition: 'box-shadow 0.2s',
+          }}
+            onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.08)'}
+            onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)'}
+          >
+            <h3 style={{ margin: '0 0 0.75rem', color: '#111827', fontSize: '1.2rem' }}>
+              {sub.title}
+            </h3>
+            <p style={{ color: '#6b7280', fontSize: '0.9rem', margin: '0 0 1rem' }}>
+              👤 作者：{sub.author || '匿名'} | 📅 提交时间：{new Date(sub.created_at).toLocaleDateString('zh-CN')}
             </p>
-            <p className={styles.excerpt}>{sub.excerpt}</p>
-            <div className={styles.actions}>
-              <button onClick={() => approvePost(sub.id)} className={styles.approveBtn}>
+            <p style={{
+              color: '#4b5563',
+              lineHeight: 1.6,
+              margin: '0 0 1.25rem',
+              padding: '1rem',
+              background: '#f9fafb',
+              borderRadius: 8,
+              fontSize: '0.95rem',
+            }}>
+              {sub.excerpt}
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button
+                onClick={() => approvePost(sub.id)}
+                style={{
+                  padding: '10px 20px',
+                  background: '#d1fae5',
+                  color: '#065f46',
+                  border: '1px solid #a7f3d0',
+                  borderRadius: 8,
+                  cursor: 'pointer',
+                  fontSize: '0.9rem',
+                  fontWeight: 600,
+                  transition: 'all 0.2s',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#a7f3d0'}
+                onMouseLeave={(e) => e.currentTarget.style.background = '#d1fae5'}
+              >
                 ✅ 批准发布
               </button>
-              <button onClick={() => alert('删除功能开发中')} className={styles.deleteBtn}>
+              <button
+                onClick={() => alert('拒绝功能开发中...')}
+                style={{
+                  padding: '10px 20px',
+                  background: '#fef2f2',
+                  color: '#dc2626',
+                  border: '1px solid #fecaca',
+                  borderRadius: 8,
+                  cursor: 'pointer',
+                  fontSize: '0.9rem',
+                  fontWeight: 600,
+                  transition: 'all 0.2s',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#fee2e2'}
+                onMouseLeave={(e) => e.currentTarget.style.background = '#fef2f2'}
+              >
                 ❌ 拒绝
               </button>
             </div>
@@ -334,7 +691,16 @@ function SubmissionsManager({ token }: { token: string }) {
         ))}
       </div>
 
-      {submissions.length === 0 && <p className={styles.empty}>🎉 暂无待审核投稿</p>}
+      {submissions.length === 0 && (
+        <div style={{
+          textAlign: 'center',
+          padding: '3rem',
+          color: '#9ca3af',
+          fontSize: '1.1rem',
+        }}>
+          🎉 暂无待审核投稿
+        </div>
+      )}
     </div>
   );
 }
