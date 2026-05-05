@@ -1,6 +1,6 @@
 module.exports = {
-  title: 'Helloworld的笔记',
-  tagline: '学习笔记 · 思维风暴 · 生活碎片',
+  title: 'BullyDoss的不务正业笔记',
+  tagline: '学习笔记 · 思维风暴 · 夸夸其谈 · 打怪经验',
 
   url: 'https://c8a118ad.bullydoss.pages.dev',
   baseUrl: '/',
@@ -36,8 +36,8 @@ module.exports = {
         docs: false,
         blog: {
           routeBasePath: '/',
-          blogTitle: 'Helloworld的笔记',
-          blogDescription: '学习笔记 · 思维风暴 · 生活碎片',
+          blogTitle: 'BullyDoss的不务正业笔记',
+          blogDescription: '学习笔记 · 思维风暴 · 夸夸其谈 · 打怪经验',
           postsPerPage: 10,
           blogSidebarCount: 'ALL',
           authorsMapPath: 'authors.yml',
@@ -51,10 +51,10 @@ module.exports = {
 
   themeConfig: {
     navbar: {
-      title: 'Helloworld的笔记',
+      title: 'BullyDoss的不务正业笔记',
       logo: {
-        alt: 'Logo',
-        src: 'img/logo.svg',
+        alt: 'BullyDoss',
+        src: 'img/duck.png',
       },
       items: [
         { to: '/', label: '首页', position: 'left' },
@@ -63,7 +63,7 @@ module.exports = {
     },
     footer: {
       style: 'dark',
-      copyright: `Copyright © ${new Date().getFullYear()} Helloworld的笔记. Built with Docusaurus.`,
+      copyright: `Copyright © ${new Date().getFullYear()} BullyDoss的不务正业笔记. Built with Docusaurus.`,
     },
     prism: {
       additionalLanguages: ['bash', 'python', 'javascript', 'typescript'],

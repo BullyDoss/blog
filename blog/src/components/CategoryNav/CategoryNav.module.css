@@ -1,0 +1,141 @@
+.container {
+  position: sticky;
+  top: calc(var(--ifm-navbar-height) + 2rem);
+  max-width: 320px;
+  margin-left: auto;
+}
+
+.card {
+  background: var(--ifm-color-surface-light);
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--ifm-color-emphasis-900);
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid var(--ifm-color-primary);
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border-radius: 6px;
+  text-decoration: none;
+  color: var(--ifm-color-emphasis-700);
+  transition: all 0.2s ease;
+  background: var(--ifm-color-background);
+  border: 1px solid transparent;
+}
+
+.item:hover {
+  background: var(--ifm-color-primary-lightest);
+  color: var(--ifm-color-primary-dark);
+  transform: translateX(4px);
+  border-color: var(--ifm-color-primary-light);
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.1);
+}
+
+.icon {
+  font-size: 1.5rem;
+  width: 2rem;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.desc {
+  font-size: 0.8rem;
+  color: var(--ifm-color-emphasis-500);
+  line-height: 1.2;
+}
+
+.arrow {
+  font-size: 1.1rem;
+  color: var(--ifm-color-emphasis-400);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.item:hover .arrow {
+  transform: translateX(4px);
+  color: var(--ifm-color-primary);
+}
+
+/* Stats Card */
+.statsCard {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 8px;
+  padding: 1.5rem;
+  color: white;
+  box-shadow: 0 4px 6px rgba(102, 126, 234, 0.2);
+}
+
+.statsTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  opacity: 0.95;
+}
+
+.stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.statItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.statItem:last-child {
+  border-bottom: none;
+}
+
+.statLabel {
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+.statValue {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/* Responsive */
+@media (max-width: 996px) {
+  .container {
+    display: none;
+  }
+}
