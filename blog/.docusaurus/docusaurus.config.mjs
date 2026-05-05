@@ -6,12 +6,15 @@
 export default {
   "title": "Helloworld的笔记",
   "tagline": "学习笔记 · 思维风暴 · 生活碎片",
-  "url": "https://your-blog.pages.dev",
+  "url": "https://c8a118ad.bullydoss.pages.dev",
   "baseUrl": "/",
   "onBrokenLinks": "warn",
   "organizationName": "BullyDoss",
   "projectName": "blog",
   "trailingSlash": false,
+  "clientModules": [
+    "C:\\Users\\Doss\\Desktop\\Blog\\blog\\src\\client\\config.js"
+  ],
   "i18n": {
     "defaultLocale": "zh-CN",
     "locales": [
@@ -59,6 +62,11 @@ export default {
           "to": "/",
           "label": "首页",
           "position": "left"
+        },
+        {
+          "to": "/admin",
+          "label": "管理后台",
+          "position": "right"
         }
       ],
       "hideOnScroll": false
@@ -150,7 +158,6 @@ export default {
   "scripts": [],
   "headTags": [],
   "stylesheets": [],
-  "clientModules": [],
   "titleDelimiter": "|",
   "noIndex": false,
   "markdown": {
