@@ -10,9 +10,10 @@ const ICONS = {
   edit: '\u{270D}\uFE0F',
 };
 
-export default function EnhancedBlogSidebar({ sidebar }) {
-  // 从 props 获取侧边栏数据
-  const { items } = sidebar || {};
+export default function EnhancedBlogSidebar(props) {
+  // 安全获取侧边栏数据，多重防御
+  const sidebarData = props?.sidebar || props || {};
+  const items = Array.isArray(sidebarData?.items) ? sidebarData.items : [];
 
   return (
     <aside className={styles.sidebar}>
@@ -21,23 +22,39 @@ export default function EnhancedBlogSidebar({ sidebar }) {
         <h3 className={styles.title}>Recent posts</h3>
       </div>
 
-      {/* 文章列表 - 按年份分组显示 */}
+      {/* 文章列表 */}
       <nav className={styles.postList}>
-        {items && items.length > 0 ? (
-          items.map((yearGroup) => (
-            <div key={yearGroup.year} className={styles.yearGroup}>
-              <h4 className={styles.yearTitle}>{yearGroup.year}</h4>
-              <ul className={styles.posts}>
-                {yearGroup.items.map((post) => (
-                  <li key={post.permalink}>
-                    <Link to={post.permalink} className={styles.postLink}>
-                      <span className={styles.postTitle}>{post.title}</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))
+        {Array.isArray(items) && items.length > 0 ? (
+          items.map((yearGroup) => {
+            // 安全检查每个年份组
+            if (!yearGroup) return null;
+            const year = yearGroup.year || '';
+            const posts = Array.isArray(yearGroup.items) ? yearGroup.items : [];
+
+            return (
+              <div key={year || Math.random()} className={styles.yearGroup}>
+                {year && <h4 className={styles.yearTitle}>{year}</h4>}
+                {posts.length > 0 && (
+                  <ul className={styles.posts}>
+                    {posts.map((post) => {
+                      // 安全检查每篇文章
+                      if (!post) return null;
+                      const permalink = post.permalink || '#';
+                      const title = post.title || '无标题';
+
+                      return (
+                        <li key={permalink}>
+                          <Link to={permalink} className={styles.postLink}>
+                            <span className={styles.postTitle}>{title}</span>
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            );
+          })
         ) : (
           /* 空状态 */
           <div className={styles.emptyState}>
