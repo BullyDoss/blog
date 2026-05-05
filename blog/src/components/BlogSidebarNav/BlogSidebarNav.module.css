@@ -1,0 +1,235 @@
+.sidebar {
+  background: var(--ifm-color-surface-light);
+  border-right: 1px solid var(--ifm-color-emphasis-200);
+  padding: 1.5rem 1.25rem;
+  min-width: 260px;
+  max-width: 280px;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* 博客信息 */
+.blogInfo {
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--ifm-color-primary);
+}
+
+.blogTitle {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--ifm-color-emphasis-900);
+  margin-bottom: 0.5rem;
+  margin-top: 0;
+}
+
+.blogDesc {
+  font-size: 0.85rem;
+  color: var(--ifm-color-emphasis-600);
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* 区块通用样式 */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sectionTitle {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ifm-color-emphasis-800);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+}
+
+.sectionIcon {
+  font-size: 1.1rem;
+}
+
+/* 分类列表 */
+.categoryList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.categoryLink {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.65rem 0.875rem;
+  border-radius: 6px;
+  text-decoration: none;
+  color: var(--ifm-color-emphasis-700);
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+  font-weight: 500;
+  border: 1px solid transparent;
+}
+
+.categoryLink:hover {
+  background: var(--ifm-color-primary-lightest);
+  color: var(--ifm-color-primary-dark);
+  transform: translateX(4px);
+  border-color: var(--ifm-color-primary-light);
+}
+
+.categoryIcon {
+  font-size: 1.2rem;
+  width: 1.5rem;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.categoryName {
+  flex: 1;
+}
+
+.categoryArrow {
+  font-size: 1.2rem;
+  color: var(--ifm-color-emphasis-400);
+  transition: transform 0.2s ease;
+  font-weight: 300;
+}
+
+.categoryLink:hover .categoryArrow {
+  transform: translateX(3px);
+  color: var(--ifm-color-primary);
+}
+
+/* 快捷链接 */
+.quickLinks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.quickLink {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.875rem;
+  border-radius: 6px;
+  text-decoration: none;
+  color: var(--ifm-color-emphasis-600);
+  transition: all 0.2s ease;
+  font-size: 0.88rem;
+  border: 1px solid transparent;
+}
+
+.quickLink:hover {
+  background: #f0f9ff;
+  color: #0369a1;
+  border-color: #bae6fd;
+}
+
+.quickLink span:first-child {
+  font-size: 1.1rem;
+}
+
+/* 关于区域 */
+.aboutSection {
+  margin-top: auto;
+  padding: 1rem;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border-radius: 8px;
+  border: 1px solid #bae6fd;
+}
+
+.aboutContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.aboutContent p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--ifm-color-emphasis-700);
+  line-height: 1.5;
+}
+
+.aboutTech {
+  color: #0369a1 !important;
+  font-weight: 500;
+}
+
+.adminLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.875rem;
+  background: white;
+  border-radius: 6px;
+  text-decoration: none;
+  color: #0369a1;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 1px solid #7dd3fc;
+  transition: all 0.2s ease;
+  margin-top: 0.25rem;
+}
+
+.adminLink:hover {
+  background: #0369a1;
+  color: white;
+  border-color: #0369a1;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(3, 105, 161, 0.15);
+}
+
+/* 底部 */
+.sidebarFooter {
+  text-align: center;
+  padding: 1rem 0 0.5rem;
+  border-top: 1px solid var(--ifm-color-emphasis-200);
+}
+
+.sidebarFooter p {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--ifm-color-emphasis-500);
+  line-height: 1.4;
+}
+
+/* 滚动条样式 */
+.sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: var(--ifm-color-emphasis-300);
+  border-radius: 3px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+  background: var(--ifm-color-emphasis-500);
+}
+
+/* 响应式 */
+@media (max-width: 996px) {
+  .sidebar {
+    display: none;
+  }
+}
