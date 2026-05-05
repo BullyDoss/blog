@@ -57,28 +57,6 @@ export default function CategoryNav() {
           ))}
         </nav>
       </div>
-
-      <div className={styles.statsCard}>
-        <h4 className={styles.statsTitle}>📊 站点信息</h4>
-        <div className={styles.stats}>
-          <div className={styles.statItem}>
-            <span className={styles.statLabel}>技术栈</span>
-            <span className={styles.statValue}>Cloudflare 全家桶</span>
-          </div>
-          <div className={styles.statItem}>
-            <span className={styles.statLabel}>框架</span>
-            <span className={styles.statValue}>Docusaurus</span>
-          </div>
-          <div className={styles.statItem}>
-            <span className={styles.statLabel}>评论系统</span>
-            <span className={styles.statValue}>Giscus</span>
-          </div>
-          <div className={styles.statItem}>
-            <span className={styles.statLabel}>部署</span>
-            <span className={styles.statValue}>Cloudflare Pages</span>
-          </div>
-        </div>
-      </div>
     </aside>
   );
 }
