@@ -2,31 +2,16 @@ import React from 'react';
 import Link from '@docusaurus/Link';
 import styles from './EnhancedBlogSidebar.module.css';
 
-const ICONS = {
-  document: '\u{1F4DD}',
-  brain: '\u{1F9E0}',
-  chat: '\u{1F4AC}',
-  sword: '\u{2694}\uFE0F',
-  edit: '\u{270D}\uFE0F',
-};
-
 export default function EnhancedBlogSidebar(props) {
-  // 安全获取侧边栏数据，多重防御
   const sidebarData = props?.sidebar || props || {};
   const items = Array.isArray(sidebarData?.items) ? sidebarData.items : [];
 
   return (
     <aside className={styles.sidebar}>
-      {/* 标题 */}
-      <div className={styles.header}>
-        <h3 className={styles.title}>Recent posts</h3>
-      </div>
-
-      {/* 文章列表 */}
+      <h3 className={styles.title}>文章导航</h3>
       <nav className={styles.postList}>
         {Array.isArray(items) && items.length > 0 ? (
           items.map((yearGroup) => {
-            // 安全检查每个年份组
             if (!yearGroup) return null;
             const year = yearGroup.year || '';
             const posts = Array.isArray(yearGroup.items) ? yearGroup.items : [];
@@ -37,15 +22,11 @@ export default function EnhancedBlogSidebar(props) {
                 {posts.length > 0 && (
                   <ul className={styles.posts}>
                     {posts.map((post) => {
-                      // 安全检查每篇文章
                       if (!post) return null;
-                      const permalink = post.permalink || '#';
-                      const title = post.title || '无标题';
-
                       return (
-                        <li key={permalink}>
-                          <Link to={permalink} className={styles.postLink}>
-                            <span className={styles.postTitle}>{title}</span>
+                        <li key={post.permalink || Math.random()}>
+                          <Link to={post.permalink || '#'} className={styles.postLink}>
+                            {post.title || '无标题'}
                           </Link>
                         </li>
                       );
@@ -56,49 +37,11 @@ export default function EnhancedBlogSidebar(props) {
             );
           })
         ) : (
-          /* 空状态 */
           <div className={styles.emptyState}>
-            <p className={styles.emptyText}>暂无文章</p>
-            <p className={styles.emptySubtext}>发布第一篇文章后这里会显示</p>
+            暂无文章
           </div>
         )}
       </nav>
-
-      {/* 底部分类快捷入口 */}
-      <div className={styles.quickNav}>
-        <h4 className={styles.sectionTitle}>分类浏览</h4>
-        <ul className={styles.categoryList}>
-          <li>
-            <Link to="/tags/学习笔记" className={styles.categoryLink}>
-              <span className={styles.catIcon}>{ICONS.document}</span>
-              学习笔记
-            </Link>
-          </li>
-          <li>
-            <Link to="/tags/思维风暴" className={styles.categoryLink}>
-              <span className={styles.catIcon}>{ICONS.brain}</span>
-              思维风暴
-            </Link>
-          </li>
-          <li>
-            <Link to="/tags/夸夸其谈" className={styles.categoryLink}>
-              <span className={styles.catIcon}>{ICONS.chat}</span>
-              夸夸其谈
-            </Link>
-          </li>
-          <li>
-            <Link to="/tags/打怪经验" className={styles.categoryLink}>
-              <span className={styles.catIcon}>{ICONS.sword}</span>
-              打怪经验
-            </Link>
-          </li>
-        </ul>
-
-        <Link to="/submit" className={styles.submitLink}>
-          <span>{ICONS.edit}</span>
-          我要投稿
-        </Link>
-      </div>
     </aside>
   );
 }
