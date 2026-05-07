@@ -34,14 +34,7 @@ module.exports = {
       '@docusaurus/preset-classic',
       {
         docs: false,
-        blog: {
-          routeBasePath: '/',
-          blogTitle: 'BullyDoss的不务正业笔记',
-          blogDescription: '学习笔记 · 思维风暴 · 夸夸其谈 · 打怪经验',
-          postsPerPage: 10,
-          blogSidebarCount: 'ALL',
-          authorsMapPath: 'authors.yml',
-        },
+        blog: false,
         theme: {
           customCss: require.resolve('./src/css/custom.css'),
         },
