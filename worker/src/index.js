@@ -23,6 +23,40 @@ const CATEGORY_LABELS = {
   submit: '投稿'
 };
 
+function matchRoute(method, pathname) {
+  const routes = [
+    { method: 'GET', pattern: /^\/api\/posts$/, handler: 'getPosts' },
+    { method: 'GET', pattern: /^\/api\/posts\/([^/]+)$/, handler: 'getPostBySlug', params: ['slug'] },
+    { method: 'GET', pattern: /^api\/categories$/, handler: 'getCategories' },
+    { method: 'POST', pattern: /^\/api\/submit$/, handler: 'submitPost' },
+    { method: 'POST', pattern: /^\/api\/images\/upload$/, handler: 'uploadImage' },
+    { method: 'POST', pattern: /^\/api\/admin\/login$/, handler: 'adminLogin' },
+    { method: 'GET', pattern: /^\/api\/admin\/posts$/, handler: 'getAdminPosts' },
+    { method: 'GET', pattern: /^\/api\/admin\/posts\/(\d+)$/, handler: 'getAdminPostById', params: ['id'] },
+    { method: 'POST', pattern: /^\/api\/admin\/posts$/, handler: 'createAdminPost' },
+    { method: 'PUT', pattern: /^\/api\/admin\/posts\/(\d+)$/, handler: 'updateAdminPost', params: ['id'] },
+    { method: 'DELETE', pattern: /^\/api\/admin\/posts\/(\d+)$/, handler: 'deleteAdminPost', params: ['id'] },
+    { method: 'PUT', pattern: /^\/api\/admin\/posts\/(\d+)\/approve$/, handler: 'approvePost', params: ['id'] },
+    { method: 'PUT', pattern: /^\/api\/admin\/posts\/(\d+)\/reject$/, handler: 'rejectPost', params: ['id'] },
+  ];
+
+  for (const route of routes) {
+    if (route.method !== method) continue;
+    const match = pathname.match(route.pattern);
+    if (match) {
+      const params = {};
+      if (route.params) {
+        route.params.forEach((name, i) => {
+          params[name] = match[i + 1];
+        });
+      }
+      return { handler: route.handler, params };
+    }
+  }
+
+  return null;
+}
+
 async function handleAPI(request, env) {
   const corsHeaders = {
     'Access-Control-Allow-Origin': env.CORS_ORIGIN || '*',
@@ -36,46 +70,51 @@ async function handleAPI(request, env) {
 
   try {
     const url = new URL(request.url);
-    
-    switch (`${request.method} ${url.pathname}`) {
-      case 'GET /api/posts':
-        return getPosts(url, env, corsHeaders);
-      
-      case 'GET /api/posts/:slug':
-        return getPostBySlug(url, env, corsHeaders);
-      
-      case 'GET /api/categories':
-        return getCategories(corsHeaders);
-      
-      case 'POST /api/submit':
-        return submitPost(request, env, corsHeaders);
-      
-      case 'POST /api/images/upload':
-        return uploadImage(request, env, corsHeaders);
-      
-      case 'POST /api/admin/login':
-        return adminLogin(request, env, corsHeaders);
-      
-      case 'GET /api/admin/posts':
-        return verifyToken(request, env).then(() => getAdminPosts(url, env, corsHeaders));
-      
-      case 'GET /api/admin/posts/:id':
-        return verifyToken(request, env).then(() => getAdminPostById(url, env, corsHeaders));
-      
-      case 'POST /api/admin/posts':
-        return verifyToken(request, env).then(() => createAdminPost(request, env, corsHeaders));
-      
-      case 'PUT /api/admin/posts/:id':
-        return verifyToken(request, env).then(() => updateAdminPost(url, request, env, corsHeaders));
-      
-      case 'DELETE /api/admin/posts/:id':
-        return verifyToken(request, env).then(() => deleteAdminPost(url, env, corsHeaders));
+    const route = matchRoute(request.method, url.pathname);
 
-      case 'PUT /api/admin/posts/:id/approve':
-        return verifyToken(request, env).then(() => approvePost(url, env, corsHeaders));
-      
-      case 'PUT /api/admin/posts/:id/reject':
-        return verifyToken(request, env).then(() => rejectPost(url, request, env, corsHeaders));
+    if (!route) {
+      return jsonResponse({ error: 'Not Found', path: url.pathname }, 404, corsHeaders);
+    }
+
+    switch (route.handler) {
+      case 'getPosts':
+        return getPosts(url, env, corsHeaders);
+
+      case 'getPostBySlug':
+        return getPostBySlug(route.params.slug, env, corsHeaders);
+
+      case 'getCategories':
+        return getCategories(corsHeaders);
+
+      case 'submitPost':
+        return submitPost(request, env, corsHeaders);
+
+      case 'uploadImage':
+        return uploadImage(request, env, corsHeaders);
+
+      case 'adminLogin':
+        return adminLogin(request, env, corsHeaders);
+
+      case 'getAdminPosts':
+        return verifyToken(request, env).then(() => getAdminPosts(url, env, corsHeaders));
+
+      case 'getAdminPostById':
+        return verifyToken(request, env).then(() => getAdminPostById(route.params.id, env, corsHeaders));
+
+      case 'createAdminPost':
+        return verifyToken(request, env).then(() => createAdminPost(request, env, corsHeaders));
+
+      case 'updateAdminPost':
+        return verifyToken(request, env).then(() => updateAdminPost(route.params.id, request, env, corsHeaders));
+
+      case 'deleteAdminPost':
+        return verifyToken(request, env).then(() => deleteAdminPost(route.params.id, env, corsHeaders));
+
+      case 'approvePost':
+        return verifyToken(request, env).then(() => approvePost(route.params.id, env, corsHeaders));
+
+      case 'rejectPost':
+        return verifyToken(request, env).then(() => rejectPost(route.params.id, request, env, corsHeaders));
 
       default:
         return jsonResponse({ error: 'Not Found' }, 404, corsHeaders);
@@ -88,7 +127,7 @@ async function handleAPI(request, env) {
 
 async function getPosts(url, env, headers) {
   const category = url.searchParams.get('category');
-  
+
   let sql = `SELECT id, slug, title, excerpt, category, status, author, created_at 
              FROM posts WHERE status = 'published'`;
   const params = [];
@@ -104,8 +143,7 @@ async function getPosts(url, env, headers) {
   return jsonResponse(result.results, 200, headers);
 }
 
-async function getPostBySlug(url, env, headers) {
-  const slug = url.pathname.split('/').pop();
+async function getPostBySlug(slug, env, headers) {
   const result = await env.DB.prepare(
     'SELECT * FROM posts WHERE slug = ? AND status = ?'
   ).bind(slug, 'published').first();
@@ -221,7 +259,7 @@ async function verifyToken(request, env) {
     }
 
     const payload = JSON.parse(atob(parts[1]));
-    
+
     const expectedSignature = await generateSignature(parts[0], parts[1], secret);
     if (parts[2] !== expectedSignature) {
       throw new Error('令牌签名无效');
@@ -293,8 +331,7 @@ async function getAdminPosts(url, env, headers) {
   return jsonResponse(result.results, 200, headers);
 }
 
-async function getAdminPostById(url, env, headers) {
-  const id = url.pathname.split('/').pop();
+async function getAdminPostById(id, env, headers) {
   const result = await env.DB.prepare(
     'SELECT * FROM posts WHERE id = ?'
   ).bind(id).first();
@@ -333,8 +370,7 @@ async function createAdminPost(request, env, headers) {
   );
 }
 
-async function updateAdminPost(url, request, env, headers) {
-  const id = url.pathname.split('/').pop();
+async function updateAdminPost(id, request, env, headers) {
   const body = await request.json();
   const { title, content, excerpt, slug, category, status } = body;
 
@@ -369,9 +405,7 @@ async function updateAdminPost(url, request, env, headers) {
   return jsonResponse({ message: '更新成功' }, 200, headers);
 }
 
-async function deleteAdminPost(url, env, headers) {
-  const id = url.pathname.split('/').pop();
-
+async function deleteAdminPost(id, env, headers) {
   await env.DB.prepare('DELETE FROM images WHERE post_id = ?').bind(id).run();
   await env.DB.prepare('DELETE FROM comments WHERE post_id = ?').bind(id).run();
   await env.DB.prepare('DELETE FROM submissions WHERE post_id = ?').bind(id).run();
@@ -380,9 +414,7 @@ async function deleteAdminPost(url, env, headers) {
   return jsonResponse({ message: '删除成功' }, 200, headers);
 }
 
-async function approvePost(url, env, headers) {
-  const id = url.pathname.split('/')[4];
-
+async function approvePost(id, env, headers) {
   await env.DB.prepare(
     "UPDATE posts SET status = 'published', updated_at = datetime('now') WHERE id = ?"
   ).bind(id).run();
@@ -390,8 +422,7 @@ async function approvePost(url, env, headers) {
   return jsonResponse({ message: '已批准发布' }, 200, headers);
 }
 
-async function rejectPost(url, request, env, headers) {
-  const id = url.pathname.split('/')[4];
+async function rejectPost(id, request, env, headers) {
   const body = await request.json();
   const { reason } = body || {};
 

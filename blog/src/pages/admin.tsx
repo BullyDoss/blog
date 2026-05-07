@@ -1,14 +1,11 @@
 import React from 'react';
 import BrowserOnly from '@docusaurus/BrowserOnly';
-import Layout from '@theme/Layout';
 
 export default function AdminPage(): React.ReactElement {
   return (
-    <Layout title="管理后台" description="博客管理后台">
-      <BrowserOnly fallback={<div style={{ textAlign: 'center', padding: '4rem', color: '#666' }}>加载中...</div>}>
-        {() => <AdminDashboard />}
-      </BrowserOnly>
-    </Layout>
+    <BrowserOnly fallback={<div style={{ textAlign: 'center', padding: '4rem', color: '#666', background: '#f3f4f6', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>加载中...</div>}>
+      {() => <AdminDashboard />}
+    </BrowserOnly>
   );
 }
 
@@ -119,12 +116,16 @@ function LoginForm({ onSuccess, apiBase }: { onSuccess: (token: string) => void;
 
   return (
     <div style={{
-      maxWidth: 420,
-      margin: '3rem auto',
-      padding: '0 1rem',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      minHeight: '100vh',
+      background: '#f3f4f6',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '2rem',
     }}>
       <div style={{
+        maxWidth: 420,
+        width: '100%',
         background: '#ffffff',
         borderRadius: 8,
         padding: '2.5rem',
@@ -138,9 +139,9 @@ function LoginForm({ onSuccess, apiBase }: { onSuccess: (token: string) => void;
           color: '#111827',
           textAlign: 'center',
         }}>
-          管理员登录
+          后台管理登录
         </h2>
-        
+
         <p style={{
           textAlign: 'center',
           color: '#6b7280',
@@ -244,6 +245,19 @@ function LoginForm({ onSuccess, apiBase }: { onSuccess: (token: string) => void;
             {loading ? '登录中...' : '登录'}
           </button>
         </form>
+
+        <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+          <a
+            href="/"
+            style={{
+              color: '#6b7280',
+              fontSize: '0.875rem',
+              textDecoration: 'none',
+            }}
+          >
+            返回首页
+          </a>
+        </div>
       </div>
     </div>
   );
@@ -251,12 +265,25 @@ function LoginForm({ onSuccess, apiBase }: { onSuccess: (token: string) => void;
 
 function AdminPanel({ token, onLogout, apiBase }: { token: string; onLogout: () => void; apiBase: string }) {
   const [showEditor, setShowEditor] = React.useState(false);
+  const [editingPost, setEditingPost] = React.useState<any>(null);
+
+  const handleEditPost = (post: any) => {
+    setEditingPost(post);
+    setShowEditor(true);
+  };
+
+  const handleSaveDone = () => {
+    setShowEditor(false);
+    setEditingPost(null);
+  };
+
+  const handleCancelEdit = () => {
+    setShowEditor(false);
+    setEditingPost(null);
+  };
 
   return (
-    <div style={{
-      minHeight: 'calc(100vh - 60px)',
-      background: '#f9fafb',
-    }}>
+    <div style={{ minHeight: '100vh', background: '#f9fafb' }}>
       {/* Header */}
       <header style={{
         background: '#111827',
@@ -267,10 +294,10 @@ function AdminPanel({ token, onLogout, apiBase }: { token: string; onLogout: () 
         alignItems: 'center',
       }}>
         <h1 style={{ margin: 0, fontSize: '1.125rem', fontWeight: 600 }}>管理后台</h1>
-        
+
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
           <button
-            onClick={() => setShowEditor(false)}
+            onClick={() => { setShowEditor(false); setEditingPost(null); }}
             style={{
               padding: '0.5rem 1rem',
               background: 'transparent',
@@ -284,48 +311,47 @@ function AdminPanel({ token, onLogout, apiBase }: { token: string; onLogout: () 
             文章管理
           </button>
           <button
-            onClick={() => setShowEditor(true)}
+            onClick={() => { setShowEditor(true); setEditingPost(null); }}
             style={{
               padding: '0.5rem 1rem',
-              background: '#fff',
-              color: '#111827',
+              background: showEditor && !editingPost ? '#fff' : 'transparent',
+              color: showEditor && !editingPost ? '#111827' : '#fff',
               border: 'none',
               borderRadius: 4,
               cursor: 'pointer',
               fontSize: '0.875rem',
-              fontWeight: 500,
+              fontWeight: showEditor && !editingPost ? 500 : 400,
             }}
           >
             写新文章
           </button>
-          <button
-            onClick={onLogout}
+          <a
+            href="/"
             style={{
               padding: '0.5rem 1rem',
-              background: 'transparent',
               color: '#fff',
-              border: 'none',
-              cursor: 'pointer',
               fontSize: '0.875rem',
+              textDecoration: 'none',
             }}
           >
-            退出
-          </button>
+            返回首页
+          </a>
         </div>
       </header>
 
       {/* Content */}
       <div style={{ padding: '2rem', maxWidth: 1200, margin: '0 auto' }}>
         {showEditor ? (
-          <PostEditor 
-            token={token} 
+          <PostEditor
+            token={token}
             apiBase={apiBase}
-            onSave={() => setShowEditor(false)}
-            onCancel={() => setShowEditor(false)}
+            post={editingPost}
+            onSave={handleSaveDone}
+            onCancel={handleCancelEdit}
           />
         ) : (
           <>
-            <AllPostsManager token={token} apiBase={apiBase} />
+            <AllPostsManager token={token} apiBase={apiBase} onEdit={handleEditPost} />
             <SubmissionsManager token={token} apiBase={apiBase} />
           </>
         )}
@@ -334,7 +360,7 @@ function AdminPanel({ token, onLogout, apiBase }: { token: string; onLogout: () 
   );
 }
 
-function AllPostsManager({ token, apiBase }: { token: string; apiBase: string }) {
+function AllPostsManager({ token, apiBase, onEdit }: { token: string; apiBase: string; onEdit: (post: any) => void }) {
   const [posts, setPosts] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
 
@@ -371,9 +397,12 @@ function AllPostsManager({ token, apiBase }: { token: string; apiBase: string })
 
       if (response.ok) {
         setPosts(posts.filter(p => p.id !== postId));
+      } else {
+        const errData = await response.json().catch(() => ({}));
+        alert(`操作失败: ${errData.error || response.status}`);
       }
     } catch (err) {
-      alert('操作失败');
+      alert(`操作失败: ${err}`);
     }
   };
 
@@ -418,6 +447,7 @@ function AllPostsManager({ token, apiBase }: { token: string; apiBase: string })
                 <td style={{ padding: '14px 16px', textAlign: 'right' }}>
                   <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', alignItems: 'center' }}>
                     <button
+                      onClick={() => onEdit(post)}
                       style={{
                         padding: '5px 14px',
                         background: '#111827',
@@ -461,25 +491,38 @@ function AllPostsManager({ token, apiBase }: { token: string; apiBase: string })
   );
 }
 
-function PostEditor({ token, apiBase, onSave, onCancel }: {
+function PostEditor({ token, apiBase, post, onSave, onCancel }: {
   token: string;
   apiBase: string;
+  post: any | null;
   onSave: () => void;
   onCancel: () => void;
 }) {
   const [formData, setFormData] = React.useState({
-    title: '',
-    slug: '',
-    content: '',
-    excerpt: '',
-    category: 'notes',
+    title: post?.title || '',
+    slug: post?.slug || '',
+    content: post?.content || '',
+    excerpt: post?.excerpt || '',
+    category: post?.category || 'notes',
   });
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState('');
 
+  React.useEffect(() => {
+    if (post) {
+      setFormData({
+        title: post.title || '',
+        slug: post.slug || '',
+        content: post.content || '',
+        excerpt: post.excerpt || '',
+        category: post.category || 'notes',
+      });
+    }
+  }, [post]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.title || !formData.content) {
       setError('标题和内容不能为空');
       return;
@@ -489,24 +532,36 @@ function PostEditor({ token, apiBase, onSave, onCancel }: {
     setError('');
 
     try {
-      const response = await fetch(`${apiBase}/api/admin/posts`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(formData),
-      });
+      let response: Response;
+      if (post) {
+        response = await fetch(`${apiBase}/api/admin/posts/${post.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(formData),
+        });
+      } else {
+        response = await fetch(`${apiBase}/api/admin/posts`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(formData),
+        });
+      }
 
       if (response.ok) {
-        alert('创建成功');
+        alert(post ? '更新成功' : '创建成功');
         onSave();
       } else {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
         setError(`[ERROR] ${errorData.error || '操作失败'}`);
       }
-    } catch (err) {
-      setError('[ERROR] 网络错误');
+    } catch (err: any) {
+      setError(`[ERROR] 网络错误: ${err.message}`);
     } finally {
       setSaving(false);
     }
@@ -532,7 +587,7 @@ function PostEditor({ token, apiBase, onSave, onCancel }: {
       border: '1px solid #e5e7eb',
     }}>
       <h2 style={{ margin: '0 0 1.5rem', color: '#111827', fontSize: '1.25rem', fontWeight: 600 }}>
-        写新文章
+        {post ? '编辑文章' : '写新文章'}
       </h2>
 
       {error && (
@@ -587,13 +642,14 @@ function PostEditor({ token, apiBase, onSave, onCancel }: {
               color: '#374151',
               marginBottom: '0.5rem',
             }}>
-              URL 别名 (Slug)
+              URL Slug
             </label>
             <input
               type="text"
               value={formData.slug}
               onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-              placeholder="my-post"
+              onBlur={generateSlugFromTitle}
+              placeholder="url-slug"
               style={{
                 width: '100%',
                 padding: '8px 12px',
@@ -696,7 +752,7 @@ function PostEditor({ token, apiBase, onSave, onCancel }: {
           <textarea
             value={formData.content}
             onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-            placeholder="在此输入正文，支持 Markdown。使用工具栏插入图片..."
+            placeholder="在此输入正文，支持 Markdown..."
             required
             rows={12}
             style={{
@@ -791,9 +847,12 @@ function SubmissionsManager({ token, apiBase }: { token: string; apiBase: string
 
       if (response.ok) {
         setSubmissions(submissions.filter(s => s.id !== postId));
+      } else {
+        const errData = await response.json().catch(() => ({}));
+        alert(`操作失败: ${errData.error || response.status}`);
       }
     } catch (err) {
-      alert('操作失败');
+      alert(`操作失败: ${err}`);
     }
   };
 
@@ -808,9 +867,12 @@ function SubmissionsManager({ token, apiBase }: { token: string; apiBase: string
 
       if (response.ok) {
         setSubmissions(submissions.filter(s => s.id !== postId));
+      } else {
+        const errData = await response.json().catch(() => ({}));
+        alert(`操作失败: ${errData.error || response.status}`);
       }
     } catch (err) {
-      alert('操作失败');
+      alert(`操作失败: ${err}`);
     }
   };
 

@@ -51,6 +51,11 @@ module.exports = {
         href: '/admin',
       },
       items: [
+        { to: '/', label: '学习笔记', position: 'left' },
+        { to: '/?cat=brainstorm', label: '思维风暴', position: 'left' },
+        { to: '/?cat=chat', label: '夸夸其谈', position: 'left' },
+        { to: '/?cat=daily', label: '打怪经验', position: 'left' },
+        { to: '/?cat=submit', label: '投稿专区', position: 'left' },
         { to: '/admin', label: '管理后台', position: 'right' },
       ],
     },

@@ -30,6 +30,16 @@ function BlogLayout() {
   };
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const cat = params.get('cat');
+      if (cat && CATEGORIES.some(c => c.id === cat)) {
+        setActiveCategory(cat);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
     fetchAllPosts();
   }, []);
 
@@ -162,45 +172,13 @@ function BlogLayout() {
         overflowY: 'auto',
         background: '#fff',
       }}>
-        {/* Category Tabs */}
-        <nav style={{
-          display: 'flex',
-          gap: '2rem',
-          padding: '0 3rem',
-          borderBottom: '1px solid #e5e7eb',
-          background: '#fff',
-          position: 'sticky',
-          top: '0',
-          zIndex: 10,
-        }}>
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => setActiveCategory(cat.id)}
-              style={{
-                padding: '1rem 0',
-                background: 'transparent',
-                color: activeCategory === cat.id ? '#111827' : '#6b7280',
-                border: 'none',
-                borderBottom: activeCategory === cat.id ? '2px solid #111827' : '2px solid transparent',
-                cursor: 'pointer',
-                fontSize: '0.95rem',
-                fontWeight: activeCategory === cat.id ? 600 : 400,
-                transition: 'all 0.2s',
-              }}
-            >
-              {cat.label}
-            </button>
-          ))}
-        </nav>
-
         {/* Category Content */}
         <div style={{ padding: '3rem 4rem', minHeight: 'calc(100vh - 120px)' }}>
           {loading ? (
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center', 
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
               height: '100%',
               color: '#9ca3af'
             }}>
@@ -224,7 +202,7 @@ function BlogLayout() {
                     fontSize: '1rem',
                     color: '#6b7280',
                   }}>
-                    {currentCategory.desc}
+                    {currentCategory?.desc}
                   </p>
                 )}
               </header>
