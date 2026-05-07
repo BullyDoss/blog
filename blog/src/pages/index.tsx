@@ -327,7 +327,7 @@ function BlogLayout() {
           )}
         </div>
 
-        {/* Bottom Toggle */}
+        {/* Bottom Toggle Buttons */}
         <div style={{
           position: 'fixed',
           bottom: '2rem',
@@ -336,7 +336,7 @@ function BlogLayout() {
           display: 'flex',
           gap: '0.5rem',
           zIndex: 100,
-        >
+        }}>
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             style={{
