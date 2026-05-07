@@ -288,24 +288,24 @@ function AdminPanel({ token, onLogout, apiBase }: { token: string; onLogout: () 
       <header style={{
         background: '#111827',
         color: 'white',
-        padding: '0.875rem 2rem',
+        padding: '0.75rem 2rem',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
       }}>
-        <h1 style={{ margin: 0, fontSize: '1.125rem', fontWeight: 600 }}>管理后台</h1>
+        <h1 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>管理后台</h1>
 
-        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
           <button
             onClick={() => { setShowEditor(false); setEditingPost(null); }}
             style={{
-              padding: '0.5rem 1rem',
-              background: 'transparent',
+              padding: '4px 14px',
+              background: showEditor ? 'transparent' : 'rgba(255,255,255,0.15)',
               color: '#fff',
               border: 'none',
+              borderRadius: 4,
               cursor: 'pointer',
-              fontSize: '0.875rem',
-              opacity: showEditor ? 0.7 : 1,
+              fontSize: '0.85rem',
             }}
           >
             文章管理
@@ -313,34 +313,37 @@ function AdminPanel({ token, onLogout, apiBase }: { token: string; onLogout: () 
           <button
             onClick={() => { setShowEditor(true); setEditingPost(null); }}
             style={{
-              padding: '0.5rem 1rem',
+              padding: '4px 14px',
               background: showEditor && !editingPost ? '#fff' : 'transparent',
               color: showEditor && !editingPost ? '#111827' : '#fff',
               border: 'none',
               borderRadius: 4,
               cursor: 'pointer',
-              fontSize: '0.875rem',
+              fontSize: '0.85rem',
               fontWeight: showEditor && !editingPost ? 500 : 400,
             }}
           >
             写新文章
           </button>
-          <a
-            href="/"
+          <button
+            onClick={onLogout}
             style={{
-              padding: '0.5rem 1rem',
+              padding: '4px 14px',
+              background: 'transparent',
               color: '#fff',
-              fontSize: '0.875rem',
-              textDecoration: 'none',
+              border: 'none',
+              borderRadius: 4,
+              cursor: 'pointer',
+              fontSize: '0.85rem',
             }}
           >
-            返回首页
-          </a>
+            退出
+          </button>
         </div>
       </header>
 
       {/* Content */}
-      <div style={{ padding: '2rem', maxWidth: 1200, margin: '0 auto' }}>
+      <div style={{ padding: '2rem 2.5rem' }}>
         {showEditor ? (
           <PostEditor
             token={token}
@@ -363,20 +366,38 @@ function AdminPanel({ token, onLogout, apiBase }: { token: string; onLogout: () 
 function AllPostsManager({ token, apiBase, onEdit }: { token: string; apiBase: string; onEdit: (post: any) => void }) {
   const [posts, setPosts] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [errorMsg, setErrorMsg] = React.useState('');
+  const [deletingId, setDeletingId] = React.useState<number | null>(null);
+
+  const apiCall = async (url: string, options?: RequestInit) => {
+    const res = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+        ...(options?.headers || {}),
+      },
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      let errDetail = '';
+      try { errDetail = JSON.parse(text).error || ''; } catch {}
+      throw new Error(errDetail || `HTTP ${res.status}`);
+    }
+    return res;
+  };
 
   const fetchPosts = async () => {
     setLoading(true);
+    setErrorMsg('');
     try {
-      const response = await fetch(`${apiBase}/api/admin/posts`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setPosts(data.filter((p: any) => p.category !== 'submit'));
-      }
-    } catch (err) {
-      console.error('获取文章失败:', err);
+      const response = await apiCall(`${apiBase}/api/admin/posts`);
+      const data = await response.json();
+      console.log('[Admin] 获取文章成功:', data.length, '条');
+      setPosts(data.filter((p: any) => p.category !== 'submit'));
+    } catch (err: any) {
+      console.error('[Admin] 获取文章失败:', err);
+      setErrorMsg(`获取文章失败: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -388,21 +409,16 @@ function AllPostsManager({ token, apiBase, onEdit }: { token: string; apiBase: s
 
   const deletePost = async (postId: number) => {
     if (!confirm('确定要删除这篇文章吗？')) return;
-
+    setDeletingId(postId);
     try {
-      const response = await fetch(`${apiBase}/api/admin/posts/${postId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.ok) {
-        setPosts(posts.filter(p => p.id !== postId));
-      } else {
-        const errData = await response.json().catch(() => ({}));
-        alert(`操作失败: ${errData.error || response.status}`);
-      }
-    } catch (err) {
-      alert(`操作失败: ${err}`);
+      await apiCall(`${apiBase}/api/admin/posts/${postId}`, { method: 'DELETE' });
+      console.log('[Admin] 删除成功:', postId);
+      setPosts(posts.filter(p => p.id !== postId));
+    } catch (err: any) {
+      console.error('[Admin] 删除失败:', err);
+      alert(`删除失败: ${err.message}`);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -412,23 +428,37 @@ function AllPostsManager({ token, apiBase, onEdit }: { token: string; apiBase: s
 
   return (
     <div style={{ marginBottom: '3rem' }}>
+      {errorMsg && (
+        <div style={{
+          background: '#fef2f2',
+          border: '1px solid #fecaca',
+          color: '#dc2626',
+          padding: '10px 16px',
+          borderRadius: 6,
+          marginBottom: '1rem',
+          fontSize: '0.875rem',
+        }}>
+          {errorMsg}
+        </div>
+      )}
+
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
-          <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
-            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 500, fontSize: '0.85rem', color: '#6b7280' }}>标题</th>
-            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 500, fontSize: '0.85rem', color: '#6b7280' }}>频道</th>
-            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 500, fontSize: '0.85rem', color: '#6b7280' }}>时间</th>
-            <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 500, fontSize: '0.85rem', color: '#6b7280' }}>操作</th>
+          <tr>
+            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 500, fontSize: '0.85rem', color: '#9ca3af', borderBottom: '1px solid #e5e7eb' }}>标题</th>
+            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 500, fontSize: '0.85rem', color: '#9ca3af', borderBottom: '1px solid #e5e7eb' }}>频道</th>
+            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 500, fontSize: '0.85rem', color: '#9ca3af', borderBottom: '1px solid #e5e7eb' }}>时间</th>
+            <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 500, fontSize: '0.85rem', color: '#9ca3af', borderBottom: '1px solid #e5e7eb' }}>操作</th>
           </tr>
         </thead>
         <tbody>
           {posts.map((post) => (
             <tr key={post.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
               <td style={{ padding: '14px 16px', color: '#111827', fontSize: '0.9rem' }}>{post.title}</td>
-              <td style={{ padding: '14px 16px', color: '#6b7280', fontSize: '0.875rem' }}>
+              <td style={{ padding: '14px 16px', color: '#9ca3af', fontSize: '0.875rem' }}>
                 {CATEGORIES.find(c => c.id === post.category)?.label || post.category}
               </td>
-              <td style={{ padding: '14px 16px', color: '#6b7280', fontSize: '0.875rem' }}>{new Date(post.created_at).toLocaleDateString('zh-CN')}</td>
+              <td style={{ padding: '14px 16px', color: '#9ca3af', fontSize: '0.875rem' }}>{new Date(post.created_at).toLocaleDateString('zh-CN')}</td>
               <td style={{ padding: '14px 16px', textAlign: 'right' }}>
                 <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', alignItems: 'center' }}>
                   <button
@@ -448,16 +478,17 @@ function AllPostsManager({ token, apiBase, onEdit }: { token: string; apiBase: s
                   </button>
                   <button
                     onClick={() => deletePost(post.id)}
+                    disabled={deletingId === post.id}
                     style={{
                       padding: '4px 0',
                       background: 'transparent',
-                      color: '#9ca3af',
+                      color: deletingId === post.id ? '#d1d5db' : '#9ca3af',
                       border: 'none',
-                      cursor: 'pointer',
+                      cursor: deletingId === post.id ? 'not-allowed' : 'pointer',
                       fontSize: '0.85rem',
                     }}
                   >
-                    删除
+                    {deletingId === post.id ? '删除中...' : '删除'}
                   </button>
                 </div>
               </td>
@@ -466,7 +497,7 @@ function AllPostsManager({ token, apiBase, onEdit }: { token: string; apiBase: s
         </tbody>
       </table>
 
-      {posts.length === 0 && (
+      {posts.length === 0 && !errorMsg && (
         <div style={{ textAlign: 'center', padding: '4rem', color: '#9ca3af' }}>
           暂无文章
         </div>
@@ -504,6 +535,24 @@ function PostEditor({ token, apiBase, post, onSave, onCancel }: {
     }
   }, [post]);
 
+  const apiCall = async (url: string, options?: RequestInit) => {
+    const res = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+        ...(options?.headers || {}),
+      },
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      let errDetail = '';
+      try { errDetail = JSON.parse(text).error || ''; } catch {}
+      throw new Error(errDetail || `HTTP ${res.status}`);
+    }
+    return res;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -514,38 +563,29 @@ function PostEditor({ token, apiBase, post, onSave, onCancel }: {
 
     setSaving(true);
     setError('');
+    console.log('[Admin] 提交文章:', post ? '更新' : '创建', formData);
 
     try {
       let response: Response;
       if (post) {
-        response = await fetch(`${apiBase}/api/admin/posts/${post.id}`, {
+        response = await apiCall(`${apiBase}/api/admin/posts/${post.id}`, {
           method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
           body: JSON.stringify(formData),
         });
       } else {
-        response = await fetch(`${apiBase}/api/admin/posts`, {
+        response = await apiCall(`${apiBase}/api/admin/posts`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
           body: JSON.stringify(formData),
         });
       }
 
-      if (response.ok) {
-        alert(post ? '更新成功' : '创建成功');
-        onSave();
-      } else {
-        const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
-        setError(`[ERROR] ${errorData.error || '操作失败'}`);
-      }
+      const result = await response.json().catch(() => ({}));
+      console.log('[Admin] 操作成功:', result);
+      alert(post ? '更新成功' : '创建成功');
+      onSave();
     } catch (err: any) {
-      setError(`[ERROR] 网络错误: ${err.message}`);
+      console.error('[Admin] 操作失败:', err);
+      setError(`[ERROR] ${err.message}`);
     } finally {
       setSaving(false);
     }
@@ -567,8 +607,9 @@ function PostEditor({ token, apiBase, post, onSave, onCancel }: {
       background: 'white',
       borderRadius: 8,
       padding: '2rem',
-      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+      boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
       border: '1px solid #e5e7eb',
+      maxWidth: 800,
     }}>
       <h2 style={{ margin: '0 0 1.5rem', color: '#111827', fontSize: '1.25rem', fontWeight: 600 }}>
         {post ? '编辑文章' : '写新文章'}
@@ -606,6 +647,7 @@ function PostEditor({ token, apiBase, post, onSave, onCancel }: {
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               placeholder="请输入标题"
               required
+              disabled={saving}
               style={{
                 width: '100%',
                 padding: '8px 12px',
@@ -634,6 +676,7 @@ function PostEditor({ token, apiBase, post, onSave, onCancel }: {
               onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
               onBlur={generateSlugFromTitle}
               placeholder="url-slug"
+              disabled={saving}
               style={{
                 width: '100%',
                 padding: '8px 12px',
@@ -661,6 +704,7 @@ function PostEditor({ token, apiBase, post, onSave, onCancel }: {
           <select
             value={formData.category}
             onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+            disabled={saving}
             style={{
               width: '200px',
               padding: '8px 12px',
@@ -692,6 +736,7 @@ function PostEditor({ token, apiBase, post, onSave, onCancel }: {
             value={formData.excerpt}
             onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })}
             placeholder="简短描述..."
+            disabled={saving}
             style={{
               width: '100%',
               padding: '8px 12px',
@@ -738,6 +783,7 @@ function PostEditor({ token, apiBase, post, onSave, onCancel }: {
             onChange={(e) => setFormData({ ...formData, content: e.target.value })}
             placeholder="在此输入正文，支持 Markdown..."
             required
+            disabled={saving}
             rows={12}
             style={{
               width: '100%',
@@ -775,13 +821,14 @@ function PostEditor({ token, apiBase, post, onSave, onCancel }: {
           <button
             type="button"
             onClick={onCancel}
+            disabled={saving}
             style={{
               padding: '12px 32px',
               background: '#fff',
               color: '#374151',
               border: '1px solid #d1d5db',
               borderRadius: 4,
-              cursor: 'pointer',
+              cursor: saving ? 'not-allowed' : 'pointer',
               fontSize: '0.95rem',
               fontWeight: 500,
             }}
@@ -798,19 +845,32 @@ function SubmissionsManager({ token, apiBase }: { token: string; apiBase: string
   const [submissions, setSubmissions] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
 
+  const apiCall = async (url: string, options?: RequestInit) => {
+    const res = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+        ...(options?.headers || {}),
+      },
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      let errDetail = '';
+      try { errDetail = JSON.parse(text).error || ''; } catch {}
+      throw new Error(errDetail || `HTTP ${res.status}`);
+    }
+    return res;
+  };
+
   const fetchSubmissions = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${apiBase}/api/admin/posts?category=submit&status=pending`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setSubmissions(data.filter((p: any) => p.status === 'pending'));
-      }
+      const response = await apiCall(`${apiBase}/api/admin/posts?category=submit&status=pending`);
+      const data = await response.json();
+      setSubmissions(data.filter((p: any) => p.status === 'pending'));
     } catch (err) {
-      console.error('获取投稿失败:', err);
+      console.error('[Admin] 获取投稿失败:', err);
     } finally {
       setLoading(false);
     }
@@ -822,41 +882,25 @@ function SubmissionsManager({ token, apiBase }: { token: string; apiBase: string
 
   const approvePost = async (postId: number) => {
     if (!confirm('确定要批准这篇投稿吗？')) return;
-
     try {
-      const response = await fetch(`${apiBase}/api/admin/posts/${postId}/approve`, {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.ok) {
-        setSubmissions(submissions.filter(s => s.id !== postId));
-      } else {
-        const errData = await response.json().catch(() => ({}));
-        alert(`操作失败: ${errData.error || response.status}`);
-      }
-    } catch (err) {
-      alert(`操作失败: ${err}`);
+      await apiCall(`${apiBase}/api/admin/posts/${postId}/approve`, { method: 'PUT' });
+      console.log('[Admin] 批准成功:', postId);
+      setSubmissions(submissions.filter(s => s.id !== postId));
+    } catch (err: any) {
+      console.error('[Admin] 批准失败:', err);
+      alert(`操作失败: ${err.message}`);
     }
   };
 
   const rejectPost = async (postId: number) => {
     if (!confirm('确定要拒绝这篇投稿吗？')) return;
-
     try {
-      const response = await fetch(`${apiBase}/api/admin/posts/${postId}/reject`, {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.ok) {
-        setSubmissions(submissions.filter(s => s.id !== postId));
-      } else {
-        const errData = await response.json().catch(() => ({}));
-        alert(`操作失败: ${errData.error || response.status}`);
-      }
-    } catch (err) {
-      alert(`操作失败: ${err}`);
+      await apiCall(`${apiBase}/api/admin/posts/${postId}/reject`, { method: 'PUT' });
+      console.log('[Admin] 拒绝成功:', postId);
+      setSubmissions(submissions.filter(s => s.id !== postId));
+    } catch (err: any) {
+      console.error('[Admin] 拒绝失败:', err);
+      alert(`操作失败: ${err.message}`);
     }
   };
 
