@@ -44,13 +44,11 @@ module.exports = {
 
   themeConfig: {
     navbar: {
-      title: {
-        to: '/admin',
-        label: 'BullyDoss的不务正业笔记',
-      },
+      title: 'BullyDoss的不务正业笔记',
       logo: {
         alt: 'BullyDoss',
         src: 'img/duck.png',
+        href: '/admin',
       },
       items: [
         {
