@@ -38,6 +38,28 @@ function formatDateTime(dateStr: string | null | undefined) {
   return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 ${weekDays[d.getDay()]} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
+function renderMarkdown(text: string): string {
+  if (!text) return '<p>-</p>';
+  let html = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%;border-radius:8px;margin:1rem 0;" loading="lazy" />');
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/__(.+?)__/g, '<em>$1</em>');
+  html = html.replace(/`([^`]+)`/g, '<code style="background:#f3f4f6;padding:2px 6px;border-radius:4px;font-size:0.88em;">$1</code>');
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" style="color:#111827;text-decoration:underline;">$1</a>');
+  html = html.replace(/^### (.+)$/gm, '<h3 style="font-size:1.15rem;font-weight:600;margin:1.5rem 0 0.5rem;color:#111827;">$1</h3>');
+  html = html.replace(/^## (.+)$/gm, '<h2 style="font-size:1.3rem;font-weight:700;margin:1.5rem 0 0.5rem;color:#111827;">$1</h2>');
+  html = html.replace(/^# (.+)$/gm, '<h1 style="font-size:1.6rem;font-weight:700;margin:1.5rem 0 0.5rem;color:#111827;">$1</h1>');
+  html = html.replace(/^> (.+)$/gm, '<blockquote style="border-left:3px solid #e5e7eb;padding-left:1rem;color:#6b7280;margin:1rem 0;">$1</blockquote>');
+  html = html.replace(/^- (.+)$/gm, '<li style="margin:0.25rem 0 0.25rem 1.5rem;">$1</li>');
+  html = html.replace(/(<li.*<\/li>\n?)+/g, (m) => `<ul style="margin:0.5rem 0;padding-left:1.5rem;">${m}</ul>`);
+  html = html.replace(/\n\n/g, '</p><p style="margin:0 0 1rem;line-height:1.8;">');
+  html = html.replace(/\n/g, '<br />');
+  return `<p style="margin:0 0 1rem;line-height:1.8;">${html}</p>`;
+}
+
 function BlogLayout() {
   const [activeCategory, setActiveCategory] = useState<string>('notes');
   const [selectedPostId, setSelectedPostId] = useState<number | null>(null);
@@ -117,8 +139,8 @@ function BlogLayout() {
           background: '#fff',
           overflowY: 'auto',
           height: isMobile ? 'auto' : 'calc(100vh - 110px)',
-          position: isMobile ? 'fixed' : 'sticky',
-          top: isMobile ? '52px' : '0',
+          position: isMobile ? 'fixed' : 'relative',
+          top: isMobile ? '52px' : 'auto',
           left: isMobile ? 0 : 'auto',
           zIndex: isMobile ? 50 : 1,
           transition: 'width 0.2s ease',
@@ -205,11 +227,10 @@ function BlogLayout() {
           <nav style={{
             display: 'flex',
             gap: isMobile ? '1rem' : '2rem',
-            padding: isMobile ? '0 1rem' : '0 2.5rem',
+            padding: isMobile ? '0 1.25rem' : '0 3rem',
             borderBottom: '1px solid #e5e7eb',
             background: '#fff',
-            position: 'sticky',
-            top: 0,
+            position: 'relative',
             zIndex: 10,
             alignItems: 'center',
             overflowX: 'auto',
@@ -261,7 +282,7 @@ function BlogLayout() {
           </nav>
 
           {/* Content Area */}
-          <div style={{ padding: isMobile ? '1.5rem 1rem' : '2.5rem 3rem', minHeight: 'calc(100vh - 120px)' }}>
+          <div style={{ padding: isMobile ? '1.5rem 1.25rem' : '2.5rem 3rem', minHeight: 'calc(100vh - 120px)' }}>
             {loading ? (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#9ca3af' }}>加载中...</div>
             ) : selectedPost ? (
@@ -431,9 +452,8 @@ function ArticleDetail({ post, categories, onBack, apiBase, isMobile }: {
         </p>
       </header>
 
-      <article style={{ marginBottom: isMobile ? '2.5rem' : '4rem', fontSize: isMobile ? '0.95rem' : '1rem', lineHeight: 1.8, color: '#374151' }}>
-        <p style={{ margin: '0 0 1.25rem' }}>{post.excerpt || post.content || '-'}</p>
-      </article>
+      <article style={{ marginBottom: isMobile ? '2.5rem' : '4rem', fontSize: isMobile ? '0.95rem' : '1rem', lineHeight: 1.8, color: '#374151' }}
+        dangerouslySetInnerHTML={{ __html: renderMarkdown(post.content || post.excerpt || '-') }} />
 
       <hr style={{ border: 'none', borderTop: '1px solid #e5e7eb', margin: '0 0 isMobile ? 1.5rem : 2.5rem' }} />
 
