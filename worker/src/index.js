@@ -1,4 +1,4 @@
-// v2.5 - support created_at in create/update + full-width admin
+// v2.6 - fix deploy workflow + frontend improvements
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
