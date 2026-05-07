@@ -343,7 +343,7 @@ function AdminPanel({ token, onLogout, apiBase }: { token: string; onLogout: () 
       </header>
 
       {/* Content */}
-      <div style={{ padding: '2rem 2.5rem' }}>
+      <div style={{ padding: '2rem 2.5rem', maxWidth: '100%' }}>
         {showEditor ? (
           <PostEditor
             token={token}
@@ -354,7 +354,7 @@ function AdminPanel({ token, onLogout, apiBase }: { token: string; onLogout: () 
           />
         ) : (
           <>
-            <AllPostsManager token={token} apiBase={apiBase} onEdit={handleEditPost} />
+            <AllPostsManager token={token} apiBase={apiBase} onEdit={handleEditPost} onRefresh={() => {}} />
             <SubmissionsManager token={token} apiBase={apiBase} />
           </>
         )}
