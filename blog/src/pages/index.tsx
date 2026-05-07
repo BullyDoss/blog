@@ -20,6 +20,7 @@ const CATEGORIES = [
 function BlogLayout() {
   const [activeCategory, setActiveCategory] = useState('notes');
   const [selectedPostId, setSelectedPostId] = useState<number | null>(null);
+  const [showSubmitForm, setShowSubmitForm] = useState(false);
   const [allPosts, setAllPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -186,26 +187,45 @@ function BlogLayout() {
           position: 'sticky',
           top: '0',
           zIndex: 10,
+          alignItems: 'center',
         }}>
           {CATEGORIES.map((cat) => (
             <button
               key={cat.id}
-              onClick={() => { setActiveCategory(cat.id); setSelectedPostId(null); }}
+              onClick={() => { setActiveCategory(cat.id); setSelectedPostId(null); setShowSubmitForm(false); }}
               style={{
                 padding: '1rem 0',
                 background: 'transparent',
-                color: activeCategory === cat.id ? '#111827' : '#6b7280',
+                color: (activeCategory === 'submit' && !showSubmitForm) && cat.id === 'submit' ? '#111827' : (activeCategory === cat.id ? '#111827' : '#6b7280'),
                 border: 'none',
-                borderBottom: activeCategory === cat.id ? '2px solid #111827' : '2px solid transparent',
+                borderBottom: (activeCategory === 'submit' && !showSubmitForm) && cat.id === 'submit' ? '2px solid #111827' : (activeCategory === cat.id ? '2px solid #111827' : '2px solid transparent'),
                 cursor: 'pointer',
                 fontSize: '0.95rem',
-                fontWeight: activeCategory === cat.id ? 600 : 400,
+                fontWeight: ((activeCategory === 'submit' && !showSubmitForm) && cat.id === 'submit') ? 600 : (activeCategory === cat.id ? 600 : 400),
                 transition: 'all 0.2s',
               }}
             >
               {cat.label}
             </button>
           ))}
+          {activeCategory === 'submit' && (
+            <button
+              onClick={() => setShowSubmitForm(!showSubmitForm)}
+              style={{
+                padding: '0.5rem 1.25rem',
+                background: showSubmitForm ? '#111827' : 'transparent',
+                color: showSubmitForm ? '#fff' : '#6b7280',
+                border: showSubmitForm ? 'none' : '1px solid #d1d5db',
+                borderRadius: 4,
+                cursor: 'pointer',
+                fontSize: '0.85rem',
+                fontWeight: showSubmitForm ? 500 : 400,
+                transition: 'all 0.2s',
+              }}
+            >
+              我要投稿
+            </button>
+          )}
         </nav>
 
         {/* Content: Detail View or Category List */}
@@ -227,6 +247,8 @@ function BlogLayout() {
               onBack={handleBackToList}
               apiBase={getApiBase()}
             />
+          ) : showSubmitForm && activeCategory === 'submit' ? (
+            <SubmitFormPanel apiBase={getApiBase()} onSuccess={() => { setShowSubmitForm(false); fetchAllPosts(); }} />
           ) : (
             <>
               {/* Category Header */}
@@ -304,6 +326,65 @@ function BlogLayout() {
           )}
         </div>
       </main>
+    </div>
+  );
+}
+
+function SubmitFormPanel({ apiBase, onSuccess }: { apiBase: string; onSuccess: () => void }) {
+  const [title, setTitle] = React.useState('');
+  const [author, setAuthor] = React.useState('');
+  const [content, setContent] = React.useState('');
+  const [submitting, setSubmitting] = React.useState(false);
+  const [error, setError] = React.useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title || !author || !content) { setError('请填写所有字段'); return; }
+    setSubmitting(true); setError('');
+    try {
+      const res = await fetch(`${apiBase}/api/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, author, content }),
+      });
+      if (!res.ok) { const data = await res.json().catch(() => ({})); throw new Error(data.error || `HTTP ${res.status}`); }
+      setTitle(''); setAuthor(''); setContent('');
+      alert('投稿成功，等待审核！');
+      onSuccess();
+    } catch (err: any) { setError(err.message); } finally { setSubmitting(false); }
+  };
+
+  return (
+    <div style={{ maxWidth: 600 }}>
+      <h1 style={{ margin: '0 0 0.5rem', fontSize: '1.75rem', fontWeight: 700, color: '#111827' }}>我要投稿</h1>
+      <p style={{ margin: '0 0 2rem', fontSize: '0.95rem', color: '#6b7280' }}>分享你的想法、经验或故事，我们会审核后发布</p>
+
+      {error && (<div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', padding: '10px 14px', borderRadius: 6, marginBottom: '1rem', fontSize: '0.875rem' }}>{error}</div>)}
+
+      <form onSubmit={handleSubmit}>
+        <div style={{ marginBottom: '1.25rem' }}>
+          <label style={{ display: 'block', fontWeight: 500, fontSize: '0.85rem', color: '#374151', marginBottom: '0.4rem' }}>标题</label>
+          <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="请输入标题" required disabled={submitting}
+            style={{ width: '100%', padding: '10px 14px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: '0.92rem', boxSizing: 'border-box', outline: 'none' }} />
+        </div>
+
+        <div style={{ marginBottom: '1.25rem' }}>
+          <label style={{ display: 'block', fontWeight: 500, fontSize: '0.85rem', color: '#374151', marginBottom: '0.4rem' }}>昵称</label>
+          <input type="text" value={author} onChange={(e) => setAuthor(e.target.value)} placeholder="你的昵称" required disabled={submitting}
+            style={{ width: '100%', padding: '10px 14px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: '0.92rem', boxSizing: 'border-box', outline: 'none' }} />
+        </div>
+
+        <div style={{ marginBottom: '1.5rem' }}>
+          <label style={{ display: 'block', fontWeight: 500, fontSize: '0.85rem', color: '#374151', marginBottom: '0.4rem' }}>正文内容</label>
+          <textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="写下你想分享的内容..." required disabled={submitting} rows={8}
+            style={{ width: '100%', padding: '10px 14px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: '0.92rem', lineHeight: 1.65, boxSizing: 'border-box', resize: 'vertical', outline: 'none' }} />
+        </div>
+
+        <button type="submit" disabled={submitting}
+          style={{ width: '100%', padding: '12px', background: submitting ? '#9ca3af' : '#111827', color: 'white', border: 'none', borderRadius: 6, cursor: submitting ? 'not-allowed' : 'pointer', fontWeight: 500, fontSize: '0.95rem' }}>
+          {submitting ? '提交中...' : '提交投稿'}
+        </button>
+      </form>
     </div>
   );
 }

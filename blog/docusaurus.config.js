@@ -50,9 +50,11 @@ module.exports = {
         src: 'img/duck.png',
         href: '/admin',
       },
-      items: [
-        { to: '/admin', label: '管理后台', position: 'right' },
-      ],
+      items: [],
+    },
+    colorMode: {
+      disableSwitch: true,
+      respectPrefersColorScheme: false,
     },
     footer: {
       style: 'dark',
