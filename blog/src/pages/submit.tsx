@@ -81,7 +81,7 @@ function SubmitPageContent() {
         <h1 style={{ fontSize: '2.25rem', margin: '0 0 0.75rem', color: '#111827' }}>
           📥 投稿专区
         </h1>
-        <p style={{ fontSize: '1.1rem', color: '#6b7280', margin: 0, lineHeight: 1.6 }}>
+        <p style={{ fontSize: "1.1rem", color: "#6b7280", margin: 0, lineHeight: "1.6" }}>
           分享你的想法和经验，让更多人看到你的精彩内容！
         </p>
         <button
@@ -195,8 +195,8 @@ function SubmitPageContent() {
               </header>
 
               <p style={{
-                color: '#4b5563',
-                lineHeight: 1.7,
+                color: "#4b5563",
+                lineHeight: "1.7",
                 margin: 0,
                 fontSize: '1rem',
               }}>
@@ -256,7 +256,7 @@ function SubmitPageContent() {
             cursor: 'pointer',
             fontSize: '1.75rem',
             boxShadow: '0 4px 20px rgba(59, 130, 246, 0.5)',
-            transition: 'all 0.3s ease',
+            transition: "all 0.3s ease",
             zIndex: 1000,
           }}
           onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
@@ -352,8 +352,8 @@ function SubmitForm({ onSuccess }: { onSuccess: () => void }) {
           padding: '14px 18px',
           borderRadius: 10,
           marginBottom: '1.5rem',
-          fontSize: '0.95rem',
-          lineHeight: 1.6,
+          fontSize: "0.95rem",
+          lineHeight: "1.6",
         }}>
           {message.text}
         </div>
@@ -480,9 +480,9 @@ function SubmitForm({ onSuccess }: { onSuccess: () => void }) {
               padding: '14px 18px',
               border: '2px solid #e5e7eb',
               borderRadius: 10,
-              fontSize: '1rem',
-              lineHeight: 1.7,
-              transition: 'border-color 0.2s',
+              fontSize: "1rem",
+              lineHeight: "1.7",
+              transition: "border-color 0.2s",
               boxSizing: 'border-box',
               fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
               resize: 'vertical',
@@ -520,7 +520,7 @@ function SubmitForm({ onSuccess }: { onSuccess: () => void }) {
           borderRadius: 8,
           fontSize: '0.9rem',
           color: '#166534',
-          lineHeight: 1.6',
+          lineHeight: "1.6",
           textAlign: 'center',
         }}>
           🔒 投稿须知：提交的内容将在审核通过后发布，请确保内容原创且符合社区规范。
