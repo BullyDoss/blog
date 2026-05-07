@@ -1,4 +1,4 @@
-// v2.1 - regex route matching, full CRUD support
+// v2.2 - regex routes, CRUD, deployed 2026-05
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);

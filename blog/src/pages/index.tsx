@@ -472,7 +472,7 @@ function ArticleDetail({ post, categories, onBack, apiBase, isMobile }: {
                 </div>
               </div>
             ))
-          ))}
+          )}
         </div>
 
         <form onSubmit={handleSubmitComment}>
