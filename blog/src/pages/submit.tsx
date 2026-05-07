@@ -123,7 +123,7 @@ function SubmitPageContent() {
           <h2 style={{ margin: '0 0 0.75rem', color: '#374151', fontSize: '1.5rem' }}>
             还没有投稿文章
           </h2>
-          <p style={{ color: '#6b7280', margin: 0 0 1.5rem', fontSize: '1.05rem' }}>
+          <p style={{ color: "#6b7280", margin: "0 0 1.5rem", fontSize: "1.05rem" }}>
             成为第一个投稿者，分享你的精彩内容吧！
           </p>
           <button
