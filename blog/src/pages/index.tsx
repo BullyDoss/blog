@@ -25,13 +25,13 @@ function formatDate(dateStr: string | null | undefined) {
 }
 
 function BlogLayout() {
-  const [activeCategory, setActiveCategory] = useState('notes');
+  const [activeCategory, setActiveCategory] = useState<string>('notes');
   const [selectedPostId, setSelectedPostId] = useState<number | null>(null);
-  const [showSubmitForm, setShowSubmitForm] = useState(false);
+  const [showSubmitForm, setShowSubmitForm] = useState<boolean>(false);
   const [allPosts, setAllPosts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
 
   const getApiBase = () => {
     if (typeof window !== 'undefined' && window.__CONFIG__) {
@@ -42,6 +42,9 @@ function BlogLayout() {
 
   useEffect(() => {
     fetchAllPosts();
+    const handleSearch = (e: any) => { setSearchQuery(e.detail); };
+    window.addEventListener('blogSearch', handleSearch);
+    return () => window.removeEventListener('blogSearch', handleSearch);
   }, []);
 
   const fetchAllPosts = async () => {
@@ -90,43 +93,6 @@ function BlogLayout() {
       minHeight: 'calc(100vh - 60px)',
       background: '#fff',
     }}>
-      {/* Top Search Bar */}
-      <div style={{
-        borderBottom: '1px solid #e5e7eb',
-        padding: '0.6rem 2rem',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '1rem',
-        background: '#fafafa',
-      }}>
-        {/* Mobile hamburger */}
-        {isMobile && (
-          <button
-            onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-            style={{ background: 'none', border: 'none', fontSize: '1.3rem', cursor: 'pointer', padding: '4px 8px', color: '#374151' }}
-          >
-            ☰
-          </button>
-        )}
-        <div style={{ flex: 1, maxWidth: 480 }}>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="搜索文章..."
-            style={{
-              width: '100%',
-              padding: '8px 14px',
-              border: '1px solid #d1d5db',
-              borderRadius: 20,
-              fontSize: '0.88rem',
-              outline: 'none',
-              background: '#fff',
-              boxSizing: 'border-box',
-            }}
-          />
-        </div>
-      </div>
 
       <div style={{ display: 'flex', position: 'relative' }}>
         {/* Left Sidebar */}
@@ -235,6 +201,10 @@ function BlogLayout() {
             overflowX: 'auto',
             WebkitOverflowScrolling: 'touch',
           }}>
+            {isMobile && (
+              <button onClick={() => setIsMobileSidebarOpen(true)}
+                style={{ background: 'none', border: 'none', fontSize: '1.3rem', cursor: 'pointer', color: '#374151', padding: '0.5rem 0.25rem', flexShrink: 0, lineHeight: 1 }}>☰</button>
+            )}
             {CATEGORIES.map((cat) => (
               <button key={cat.id}
                 onClick={() => { setActiveCategory(cat.id); setSelectedPostId(null); setShowSubmitForm(false); }}
