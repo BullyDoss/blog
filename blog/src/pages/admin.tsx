@@ -57,9 +57,9 @@ function AdminDashboard() {
 
   const getApiBase = () => {
     if (typeof window !== 'undefined' && window.__CONFIG__) {
-      return window.__CONFIG__.apiBaseUrl || 'https://api.bullydoss.com';
+      return window.__CONFIG__.apiBaseUrl || 'https://blog-api.bullydoss-blog.workers.dev';
     }
-    return 'https://api.bullydoss.com';
+    return 'https://blog-api.bullydoss-blog.workers.dev';
   };
 
   React.useEffect(() => {
