@@ -14,6 +14,15 @@ export default {
   },
 };
 
+const VALID_CATEGORIES = ['notes', 'brainstorm', 'chat', 'daily', 'submit'];
+const CATEGORY_LABELS = {
+  notes: '学习笔记',
+  brainstorm: '思维风暴',
+  chat: '夸夸其谈',
+  daily: '打怪经验',
+  submit: '投稿'
+};
+
 async function handleAPI(request, env) {
   const corsHeaders = {
     'Access-Control-Allow-Origin': env.CORS_ORIGIN || '*',
@@ -35,6 +44,9 @@ async function handleAPI(request, env) {
       case 'GET /api/posts/:slug':
         return getPostBySlug(url, env, corsHeaders);
       
+      case 'GET /api/categories':
+        return getCategories(corsHeaders);
+      
       case 'POST /api/submit':
         return submitPost(request, env, corsHeaders);
       
@@ -45,7 +57,10 @@ async function handleAPI(request, env) {
         return adminLogin(request, env, corsHeaders);
       
       case 'GET /api/admin/posts':
-        return verifyToken(request, env).then(() => getAdminPosts(env, corsHeaders));
+        return verifyToken(request, env).then(() => getAdminPosts(url, env, corsHeaders));
+      
+      case 'GET /api/admin/posts/:id':
+        return verifyToken(request, env).then(() => getAdminPostById(url, env, corsHeaders));
       
       case 'POST /api/admin/posts':
         return verifyToken(request, env).then(() => createAdminPost(request, env, corsHeaders));
@@ -56,23 +71,29 @@ async function handleAPI(request, env) {
       case 'DELETE /api/admin/posts/:id':
         return verifyToken(request, env).then(() => deleteAdminPost(url, env, corsHeaders));
 
+      case 'PUT /api/admin/posts/:id/approve':
+        return verifyToken(request, env).then(() => approvePost(url, env, corsHeaders));
+      
+      case 'PUT /api/admin/posts/:id/reject':
+        return verifyToken(request, env).then(() => rejectPost(url, request, env, corsHeaders));
+
       default:
         return jsonResponse({ error: 'Not Found' }, 404, corsHeaders);
     }
   } catch (err) {
     console.error('API Error:', err);
-    return jsonResponse({ error: 'Internal Server Error' }, 500, corsHeaders);
+    return jsonResponse({ error: 'Internal Server Error', detail: err.message }, 500, corsHeaders);
   }
 }
 
 async function getPosts(url, env, headers) {
   const category = url.searchParams.get('category');
   
-  let sql = `SELECT id, slug, title, excerpt, category, status, created_at 
+  let sql = `SELECT id, slug, title, excerpt, category, status, author, created_at 
              FROM posts WHERE status = 'published'`;
   const params = [];
 
-  if (category && ['notes', 'brainstorm', 'chat', 'daily', 'submit'].includes(category)) {
+  if (category && VALID_CATEGORIES.includes(category)) {
     sql += ' AND category = ?';
     params.push(category);
   }
@@ -100,9 +121,18 @@ async function getPostBySlug(url, env, headers) {
   return jsonResponse({ ...result, images: images.results }, 200, headers);
 }
 
+async function getCategories(headers) {
+  return jsonResponse({
+    categories: VALID_CATEGORIES.map(cat => ({
+      id: cat,
+      label: CATEGORY_LABELS[cat] || cat
+    }))
+  }, 200, headers);
+}
+
 async function submitPost(request, env, headers) {
   const body = await request.json();
-  const { title, author, content, email, category = 'submit' } = body;
+  const { title, author, content, email } = body;
 
   if (!title || !author || !content) {
     return jsonResponse({ error: '请填写必要信息' }, 400, headers);
@@ -114,7 +144,7 @@ async function submitPost(request, env, headers) {
   const result = await env.DB.prepare(
     `INSERT INTO posts (slug, title, content, excerpt, category, status, author, email)
      VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)`
-  ).bind(slug, title, content, excerpt, category, author, email).run();
+  ).bind(slug, title, content, excerpt, 'submit', author, email).run();
 
   return jsonResponse(
     { id: result.meta.last_row_id, message: '投稿成功，等待审核' },
@@ -160,7 +190,6 @@ async function adminLogin(request, env, headers) {
     return jsonResponse({ error: '用户名和密码不能为空' }, 400, headers);
   }
 
-  // 从环境变量读取管理员账号密码
   const adminUser = env.ADMIN_USERNAME || 'admin';
   const adminPass = env.ADMIN_PASSWORD || 'admin123456';
 
@@ -193,13 +222,11 @@ async function verifyToken(request, env) {
 
     const payload = JSON.parse(atob(parts[1]));
     
-    // 验证签名
     const expectedSignature = await generateSignature(parts[0], parts[1], secret);
     if (parts[2] !== expectedSignature) {
       throw new Error('令牌签名无效');
     }
 
-    // 验证过期
     if (payload.exp < Math.floor(Date.now() / 1000)) {
       throw new Error('令牌已过期');
     }
@@ -214,7 +241,7 @@ async function generateJWT(payload, secret) {
   const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
   const data = btoa(JSON.stringify({
     ...payload,
-    exp: Math.floor(Date.now() / 1000) + 24 * 60 * 60, // 24小时过期
+    exp: Math.floor(Date.now() / 1000) + 24 * 60 * 60,
     iat: Math.floor(Date.now() / 1000),
   }));
   const signature = await generateSignature(header, data, secret);
@@ -241,27 +268,63 @@ async function generateSignature(header, data, secret) {
     .replace(/\//g, '_');
 }
 
-// ===================== 后台管理 =====================
+// ===================== 后台管理 - 增强版 =====================
 
-async function getAdminPosts(env, headers) {
-  const result = await env.DB.prepare(
-    'SELECT * FROM posts ORDER BY created_at DESC'
-  ).all();
+async function getAdminPosts(url, env, headers) {
+  const category = url.searchParams.get('category');
+  const status = url.searchParams.get('status');
+
+  let sql = 'SELECT * FROM posts WHERE 1=1';
+  const params = [];
+
+  if (category && VALID_CATEGORIES.includes(category)) {
+    sql += ' AND category = ?';
+    params.push(category);
+  }
+
+  if (status && ['published', 'pending'].includes(status)) {
+    sql += ' AND status = ?';
+    params.push(status);
+  }
+
+  sql += ' ORDER BY created_at DESC';
+
+  const result = await env.DB.prepare(sql).bind(...params).all();
   return jsonResponse(result.results, 200, headers);
+}
+
+async function getAdminPostById(url, env, headers) {
+  const id = url.pathname.split('/').pop();
+  const result = await env.DB.prepare(
+    'SELECT * FROM posts WHERE id = ?'
+  ).bind(id).first();
+
+  if (!result) {
+    return jsonResponse({ error: '文章不存在' }, 404, headers);
+  }
+
+  return jsonResponse(result, 200, headers);
 }
 
 async function createAdminPost(request, env, headers) {
   const body = await request.json();
-  const { slug, title, content, excerpt, category = 'notes' } = body;
+  const { title, content, category = 'notes', excerpt, tags } = body;
 
-  if (!slug || !title || !content) {
-    return jsonResponse({ error: '标题、slug 和内容不能为空' }, 400, headers);
+  if (!title || !content) {
+    return jsonResponse({ error: '标题和内容不能为空' }, 400, headers);
   }
 
+  if (!VALID_CATEGORIES.includes(category)) {
+    return jsonResponse({ error: '无效的分类' }, 400, headers);
+  }
+
+  const slug = body.slug || generateSlug(title);
+  const autoExcerpt = excerpt || (content.length > 150 ? content.slice(0, 150) + '...' : content);
+
   const result = await env.DB.prepare(
-    `INSERT INTO posts (slug, title, content, excerpt, category, status)
-     VALUES (?, ?, ?, ?, ?, 'published')`
-  ).bind(slug, title, content, excerpt, category).run();
+    `INSERT INTO posts (slug, title, content, excerpt, category, status, author)
+     VALUES (?, ?, ?, ?, ?, 'published', 'admin')`
+  ).bind(slug, title, content, autoExcerpt, category).run();
 
   return jsonResponse(
     { id: result.meta.last_row_id, message: '创建成功' },
@@ -273,12 +336,35 @@ async function createAdminPost(request, env, headers) {
 async function updateAdminPost(url, request, env, headers) {
   const id = url.pathname.split('/').pop();
   const body = await request.json();
-  const { title, content, excerpt, slug, category } = body;
+  const { title, content, excerpt, slug, category, status } = body;
+
+  const existingPost = await env.DB.prepare(
+    'SELECT * FROM posts WHERE id = ?'
+  ).bind(id).first();
+
+  if (!existingPost) {
+    return jsonResponse({ error: '文章不存在' }, 404, headers);
+  }
 
   await env.DB.prepare(
-    `UPDATE posts SET title = ?, content = ?, excerpt = ?, slug = ?, category = ?
+    `UPDATE posts SET 
+      title = COALESCE(?, title), 
+      content = COALESCE(?, content), 
+      excerpt = COALESCE(?, excerpt), 
+      slug = COALESCE(?, slug), 
+      category = COALESCE(?, category),
+      status = COALESCE(?, status),
+      updated_at = datetime('now')
      WHERE id = ?`
-  ).bind(title, content, excerpt, slug, category, id).run();
+  ).bind(
+    title || null,
+    content || null,
+    excerpt || null,
+    slug || null,
+    category || null,
+    status || null,
+    id
+  ).run();
 
   return jsonResponse({ message: '更新成功' }, 200, headers);
 }
@@ -287,9 +373,33 @@ async function deleteAdminPost(url, env, headers) {
   const id = url.pathname.split('/').pop();
 
   await env.DB.prepare('DELETE FROM images WHERE post_id = ?').bind(id).run();
+  await env.DB.prepare('DELETE FROM comments WHERE post_id = ?').bind(id).run();
+  await env.DB.prepare('DELETE FROM submissions WHERE post_id = ?').bind(id).run();
   await env.DB.prepare('DELETE FROM posts WHERE id = ?').bind(id).run();
 
   return jsonResponse({ message: '删除成功' }, 200, headers);
+}
+
+async function approvePost(url, env, headers) {
+  const id = url.pathname.split('/')[4];
+
+  await env.DB.prepare(
+    "UPDATE posts SET status = 'published', updated_at = datetime('now') WHERE id = ?"
+  ).bind(id).run();
+
+  return jsonResponse({ message: '已批准发布' }, 200, headers);
+}
+
+async function rejectPost(url, request, env, headers) {
+  const id = url.pathname.split('/')[4];
+  const body = await request.json();
+  const { reason } = body || {};
+
+  await env.DB.prepare(
+    "UPDATE posts SET status = 'rejected', updated_at = datetime('now') WHERE id = ?"
+  ).bind(id).run();
+
+  return jsonResponse({ message: '已拒绝', reason }, 200, headers);
 }
 
 // ===================== 工具函数 =====================

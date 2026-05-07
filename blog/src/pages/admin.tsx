@@ -12,6 +12,14 @@ export default function AdminPage(): React.ReactElement {
   );
 }
 
+const CATEGORIES = [
+  { id: 'notes', label: '📝 学习笔记', icon: '📝' },
+  { id: 'brainstorm', label: '🧠 思维风暴', icon: '🧠' },
+  { id: 'chat', label: '💬 夸夸其谈', icon: '💬' },
+  { id: 'daily', label: '⚔️ 打怪经验', icon: '⚔️' },
+  { id: 'submit', label: '📥 投稿审核', icon: '📥' },
+];
+
 function AdminDashboard() {
   const [view, setView] = React.useState<'login' | 'dashboard'>('login');
   const [token, setToken] = React.useState(() => {
@@ -244,31 +252,17 @@ function LoginForm({ onSuccess, apiBase }: { onSuccess: (token: string) => void;
             {loading ? '⏳ 登录中...' : '🚀 登 录'}
           </button>
         </form>
-
-        <div style={{
-          marginTop: '1.5rem',
-          padding: '1rem',
-          background: '#f0fdf4',
-          borderRadius: 8,
-          fontSize: '0.85rem',
-          color: '#166534',
-          lineHeight: 1.6,
-        }}>
-          🔒 安全提示：<br/>
-          此登录页面连接到 Cloudflare Workers 后端 API<br/>
-          请使用管理员账号登录
-        </div>
       </div>
     </div>
   );
 }
 
 function AdminPanel({ token, onLogout, apiBase }: { token: string; onLogout: () => void; apiBase: string }) {
-  const [activeTab, setActiveTab] = React.useState<'posts' | 'submissions'>('posts');
+  const [activeTab, setActiveTab] = React.useState<string>('notes');
 
   return (
     <div style={{
-      maxWidth: 1100,
+      maxWidth: 1200,
       margin: '2rem auto',
       padding: '0 1.5rem',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
@@ -307,49 +301,54 @@ function AdminPanel({ token, onLogout, apiBase }: { token: string; onLogout: () 
         gap: '0.5rem',
         marginBottom: '2rem',
         borderBottom: '2px solid #e5e7eb',
+        flexWrap: 'wrap',
       }}>
-        {(['posts', 'submissions'] as const).map((tab) => (
+        {CATEGORIES.map((cat) => (
           <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
+            key={cat.id}
+            onClick={() => setActiveTab(cat.id)}
             style={{
-              padding: '14px 28px',
-              background: activeTab === tab ? '#eff6ff' : 'transparent',
+              padding: '14px 24px',
+              background: activeTab === cat.id ? '#eff6ff' : 'transparent',
               border: 'none',
-              borderBottom: `3px solid ${activeTab === tab ? '#3b82f6' : 'transparent'}`,
+              borderBottom: `3px solid ${activeTab === cat.id ? '#3b82f6' : 'transparent'}`,
               fontSize: '1rem',
               fontWeight: 600,
               cursor: 'pointer',
-              color: activeTab === tab ? '#2563eb' : '#6b7280',
+              color: activeTab === cat.id ? '#2563eb' : '#6b7280',
               transition: 'all 0.2s',
               marginBottom: -2,
             }}
           >
-            {tab === 'posts' ? '📝 文章管理' : '📥 投稿审核'}
+            {cat.label}
           </button>
         ))}
       </nav>
 
       <main style={{ minHeight: 400 }}>
-        {activeTab === 'posts'
-          ? <PostsManager token={token} apiBase={apiBase} />
-          : <SubmissionsManager token={token} apiBase={apiBase} />
+        {activeTab === 'submit' 
+          ? <SubmissionsManager token={token} apiBase={apiBase} />
+          : <CategoryManager category={activeTab} token={token} apiBase={apiBase} />
         }
       </main>
     </div>
   );
 }
 
-function PostsManager({ token, apiBase }: { token: string; apiBase: string }) {
+function CategoryManager({ category, token, apiBase }: { category: string; token: string; apiBase: string }) {
   const [posts, setPosts] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [showEditor, setShowEditor] = React.useState(false);
+  const [editingPost, setEditingPost] = React.useState<any>(null);
   const [error, setError] = React.useState('');
 
+  const categoryInfo = CATEGORIES.find(c => c.id === category);
+  
   const fetchPosts = async () => {
     setLoading(true);
     setError('');
     try {
-      const response = await fetch(`${apiBase}/api/admin/posts`, {
+      const response = await fetch(`${apiBase}/api/admin/posts?category=${category}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -371,7 +370,7 @@ function PostsManager({ token, apiBase }: { token: string; apiBase: string }) {
 
   React.useEffect(() => {
     fetchPosts();
-  }, [token]);
+  }, [category]);
 
   const deletePost = async (postId: number) => {
     if (!confirm('确定要删除这篇文章吗？此操作不可恢复！')) return;
@@ -392,6 +391,38 @@ function PostsManager({ token, apiBase }: { token: string; apiBase: string }) {
       alert('❌ 网络错误');
     }
   };
+
+  const handleEdit = (post: any) => {
+    setEditingPost(post);
+    setShowEditor(true);
+  };
+
+  const handleCreate = () => {
+    setEditingPost(null);
+    setShowEditor(true);
+  };
+
+  const handleSaveSuccess = () => {
+    setShowEditor(false);
+    setEditingPost(null);
+    fetchPosts();
+  };
+
+  if (showEditor) {
+    return (
+      <PostEditor
+        post={editingPost}
+        category={category}
+        token={token}
+        apiBase={apiBase}
+        onSave={handleSaveSuccess}
+        onCancel={() => {
+          setShowEditor(false);
+          setEditingPost(null);
+        }}
+      />
+    );
+  }
 
   if (loading) {
     return (
@@ -437,17 +468,32 @@ function PostsManager({ token, apiBase }: { token: string; apiBase: string }) {
         fontWeight: 600,
         color: '#374151',
       }}>
-        <span>共 {posts.length} 篇文章</span>
-        <button onClick={fetchPosts} style={{
-          padding: '8px 16px',
-          background: '#f3f4f6',
-          border: '1px solid #d1d5db',
-          borderRadius: 6,
-          cursor: 'pointer',
-          fontSize: '0.9rem',
-        }}>
-          🔄 刷新
-        </button>
+        <span>共 {posts.length} 篇{categoryInfo?.label.replace(/^[^\s]+\s/, '')}</span>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <button onClick={fetchPosts} style={{
+            padding: '8px 16px',
+            background: '#f3f4f6',
+            border: '1px solid #d1d5db',
+            borderRadius: 6,
+            cursor: 'pointer',
+            fontSize: '0.9rem',
+          }}>
+            🔄 刷新
+          </button>
+          <button onClick={handleCreate} style={{
+            padding: '8px 20px',
+            background: '#3b82f6',
+            color: 'white',
+            border: 'none',
+            borderRadius: 6,
+            cursor: 'pointer',
+            fontSize: '0.9rem',
+            fontWeight: 600,
+            boxShadow: '0 2px 8px rgba(59, 130, 246, 0.3)',
+          }}>
+            ➕ 新建文章
+          </button>
+        </div>
       </div>
 
       <div style={{
@@ -460,7 +506,7 @@ function PostsManager({ token, apiBase }: { token: string; apiBase: string }) {
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: '#f9fafb' }}>
-              {['ID', '标题', '分类', '状态', '创建时间', '操作'].map((th) => (
+              {['ID', '标题', 'Slug', '状态', '创建时间', '操作'].map((th) => (
                 <th key={th} style={{
                   padding: '14px 18px',
                   textAlign: 'left',
@@ -486,19 +532,11 @@ function PostsManager({ token, apiBase }: { token: string; apiBase: string }) {
                 onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
               >
                 <td style={{ padding: '14px 18px', color: '#6b7280' }}>{post.id}</td>
-                <td style={{ padding: '14px 18px', fontWeight: 500, color: '#111827' }}>{post.title}</td>
-                <td style={{ padding: '14px 18px' }}>
-                  <span style={{
-                    display: 'inline-block',
-                    padding: '4px 12px',
-                    borderRadius: 20,
-                    fontSize: '0.85rem',
-                    fontWeight: 600,
-                    background: '#f3f4f6',
-                    color: '#374151',
-                  }}>
-                    {post.category}
-                  </span>
+                <td style={{ padding: '14px 18px', fontWeight: 500, color: '#111827', maxWidth: 300 }}>
+                  {post.title}
+                </td>
+                <td style={{ padding: '14px 18px', color: '#6b7280', fontFamily: 'monospace', fontSize: '0.85rem' }}>
+                  {post.slug}
                 </td>
                 <td style={{ padding: '14px 18px' }}>
                   <span style={{
@@ -517,30 +555,38 @@ function PostsManager({ token, apiBase }: { token: string; apiBase: string }) {
                   {new Date(post.created_at).toLocaleDateString('zh-CN')}
                 </td>
                 <td style={{ padding: '14px 18px' }}>
-                  <button
-                    onClick={() => deletePost(post.id)}
-                    style={{
-                      padding: '8px 16px',
-                      background: '#fef2f2',
-                      color: '#dc2626',
-                      border: '1px solid #fecaca',
-                      borderRadius: 6,
-                      cursor: 'pointer',
-                      fontSize: '0.85rem',
-                      fontWeight: 600,
-                      transition: 'all 0.2s',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = '#fee2e2';
-                      e.currentTarget.style.borderColor = '#fca5a5';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = '#fef2f2';
-                      e.currentTarget.style.borderColor = '#fecaca';
-                    }}
-                  >
-                    🗑️ 删除
-                  </button>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button
+                      onClick={() => handleEdit(post)}
+                      style={{
+                        padding: '6px 12px',
+                        background: '#eff6ff',
+                        color: '#2563eb',
+                        border: '1px solid #bfdbfe',
+                        borderRadius: 6,
+                        cursor: 'pointer',
+                        fontSize: '0.85rem',
+                        fontWeight: 600,
+                      }}
+                    >
+                      ✏️ 编辑
+                    </button>
+                    <button
+                      onClick={() => deletePost(post.id)}
+                      style={{
+                        padding: '6px 12px',
+                        background: '#fef2f2',
+                        color: '#dc2626',
+                        border: '1px solid #fecaca',
+                        borderRadius: 6,
+                        cursor: 'pointer',
+                        fontSize: '0.85rem',
+                        fontWeight: 600,
+                      }}
+                    >
+                      🗑️ 删除
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -555,9 +601,280 @@ function PostsManager({ token, apiBase }: { token: string; apiBase: string }) {
           color: '#9ca3af',
           fontSize: '1.1rem',
         }}>
-          📭 暂无文章
+          📭 暂无文章，点击"新建文章"开始创作吧！
         </div>
       )}
+    </div>
+  );
+}
+
+function PostEditor({ post, category, token, apiBase, onSave, onCancel }: {
+  post: any;
+  category: string;
+  token: string;
+  apiBase: string;
+  onSave: () => void;
+  onCancel: () => void;
+}) {
+  const isEdit = !!post;
+  const [formData, setFormData] = React.useState({
+    title: post?.title || '',
+    slug: post?.slug || '',
+    content: post?.content || '',
+    excerpt: post?.excerpt || '',
+    category: post?.category || category,
+  });
+  const [saving, setSaving] = React.useState(false);
+  const [error, setError] = React.useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.title || !formData.content) {
+      setError('标题和内容不能为空');
+      return;
+    }
+
+    setSaving(true);
+    setError('');
+
+    try {
+      let response: Response;
+      
+      if (isEdit) {
+        response = await fetch(`${apiBase}/api/admin/posts/${post.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(formData),
+        });
+      } else {
+        response = await fetch(`${apiBase}/api/admin/posts`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(formData),
+        });
+      }
+
+      if (response.ok) {
+        alert(isEdit ? '✅ 更新成功' : '✅ 创建成功');
+        onSave();
+      } else {
+        const errorData = await response.json();
+        setError(`❌ ${errorData.error || '操作失败'}`);
+      }
+    } catch (err) {
+      setError('❌ 网络错误');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const generateSlugFromTitle = () => {
+    const slug = formData.title
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s-]/g, '')
+      .replace(/[\s_]+/g, '-')
+      .replace(/-+/g, '-')
+      .substring(0, 80);
+    setFormData({ ...formData, slug });
+  };
+
+  return (
+    <div style={{
+      background: 'white',
+      borderRadius: 12,
+      padding: '2rem',
+      boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
+      border: '1px solid #e5e7eb',
+    }}>
+      <h2 style={{ margin: '0 0 1.5rem', color: '#111827' }}>
+        {isEdit ? '✏️ 编辑文章' : '➕ 新建文章'}
+      </h2>
+
+      {error && (
+        <div style={{
+          background: '#fef2f2',
+          border: '1px solid #fecaca',
+          color: '#dc2626',
+          padding: '12px 16px',
+          borderRadius: 8,
+          marginBottom: '1.5rem',
+        }}>
+          {error}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit}>
+        <div style={{ marginBottom: '1.25rem' }}>
+          <label style={{
+            display: 'block',
+            fontWeight: 600,
+            fontSize: '0.9rem',
+            color: '#374151',
+            marginBottom: '0.5rem',
+          }}>
+            标题 *
+          </label>
+          <input
+            type="text"
+            value={formData.title}
+            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+            placeholder="输入文章标题"
+            required
+            style={{
+              width: '100%',
+              padding: '12px 16px',
+              border: '2px solid #e5e7eb',
+              borderRadius: 8,
+              fontSize: '1rem',
+              boxSizing: 'border-box',
+            }}
+          />
+        </div>
+
+        <div style={{ marginBottom: '1.25rem' }}>
+          <label style={{
+            display: 'block',
+            fontWeight: 600,
+            fontSize: '0.9rem',
+            color: '#374151',
+            marginBottom: '0.5rem',
+          }}>
+            Slug (URL 路径)
+          </label>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <input
+              type="text"
+              value={formData.slug}
+              onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+              placeholder="自动生成或手动输入"
+              style={{
+                flex: 1,
+                padding: '12px 16px',
+                border: '2px solid #e5e7eb',
+                borderRadius: 8,
+                fontSize: '1rem',
+                boxSizing: 'border-box',
+                fontFamily: 'monospace',
+              }}
+            />
+            <button
+              type="button"
+              onClick={generateSlugFromTitle}
+              style={{
+                padding: '12px 20px',
+                background: '#f3f4f6',
+                border: '2px solid #d1d5db',
+                borderRadius: 8,
+                cursor: 'pointer',
+                fontWeight: 600,
+                fontSize: '0.9rem',
+              }}
+            >
+              自动生成
+            </button>
+          </div>
+        </div>
+
+        <div style={{ marginBottom: '1.25rem' }}>
+          <label style={{
+            display: 'block',
+            fontWeight: 600,
+            fontSize: '0.9rem',
+            color: '#374151',
+            marginBottom: '0.5rem',
+          }}>
+            摘要
+          </label>
+          <input
+            type="text"
+            value={formData.excerpt}
+            onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })}
+            placeholder="文章摘要（可选，留空则自动生成）"
+            style={{
+              width: '100%',
+              padding: '12px 16px',
+              border: '2px solid #e5e7eb',
+              borderRadius: 8,
+              fontSize: '1rem',
+              boxSizing: 'border-box',
+            }}
+          />
+        </div>
+
+        <div style={{ marginBottom: '1.5rem' }}>
+          <label style={{
+            display: 'block',
+            fontWeight: 600,
+            fontSize: '0.9rem',
+            color: '#374151',
+            marginBottom: '0.5rem',
+          }}>
+            内容 * (支持 Markdown)
+          </label>
+          <textarea
+            value={formData.content}
+            onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+            placeholder="在这里撰写你的文章...&#10;&#10;支持 Markdown 语法：**粗体**、*斜体*、# 标题、- 列表等"
+            required
+            rows={15}
+            style={{
+              width: '100%',
+              padding: '12px 16px',
+              border: '2px solid #e5e7eb',
+              borderRadius: 8,
+              fontSize: '1rem',
+              lineHeight: 1.6,
+              boxSizing: 'border-box',
+              fontFamily: 'monospace',
+              resize: 'vertical',
+            }}
+          />
+        </div>
+
+        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+          <button
+            type="button"
+            onClick={onCancel}
+            style={{
+              padding: '12px 24px',
+              background: '#f3f4f6',
+              color: '#374151',
+              border: '2px solid #d1d5db',
+              borderRadius: 8,
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: '1rem',
+            }}
+          >
+            取消
+          </button>
+          <button
+            type="submit"
+            disabled={saving}
+            style={{
+              padding: '12px 32px',
+              background: saving ? '#9ca3af' : '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: 8,
+              cursor: saving ? 'not-allowed' : 'pointer',
+              fontWeight: 700,
+              fontSize: '1rem',
+              boxShadow: saving ? 'none' : '0 4px 12px rgba(59, 130, 246, 0.35)',
+            }}
+          >
+            {saving ? '⏳ 保存中...' : '💾 保存'}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
@@ -569,7 +886,7 @@ function SubmissionsManager({ token, apiBase }: { token: string; apiBase: string
   const fetchSubmissions = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${apiBase}/api/admin/posts?status=pending`, {
+      const response = await fetch(`${apiBase}/api/admin/posts?category=submit&status=pending`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -589,19 +906,41 @@ function SubmissionsManager({ token, apiBase }: { token: string; apiBase: string
   }, [token]);
 
   const approvePost = async (postId: number) => {
+    if (!confirm('确定要批准这篇投稿并发布吗？')) return;
+
     try {
-      const response = await fetch(`${apiBase}/api/admin/posts/${postId}`, {
+      const response = await fetch(`${apiBase}/api/admin/posts/${postId}/approve`, {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ status: 'published' }),
       });
 
       if (response.ok) {
         setSubmissions(submissions.filter(s => s.id !== postId));
         alert('✅ 已批准发布');
+      }
+    } catch (err) {
+      alert('❌ 操作失败');
+    }
+  };
+
+  const rejectPost = async (postId: number) => {
+    const reason = prompt('请输入拒绝原因（可选）：');
+    
+    try {
+      const response = await fetch(`${apiBase}/api/admin/posts/${postId}/reject`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ reason }),
+      });
+
+      if (response.ok) {
+        setSubmissions(submissions.filter(s => s.id !== postId));
+        alert('✅ 已拒绝该投稿');
       }
     } catch (err) {
       alert('❌ 操作失败');
@@ -662,6 +1001,8 @@ function SubmissionsManager({ token, apiBase }: { token: string; apiBase: string
               background: '#f9fafb',
               borderRadius: 8,
               fontSize: '0.95rem',
+              maxHeight: 150,
+              overflow: 'auto',
             }}>
               {sub.excerpt}
             </p>
@@ -685,7 +1026,7 @@ function SubmissionsManager({ token, apiBase }: { token: string; apiBase: string
                 ✅ 批准发布
               </button>
               <button
-                onClick={() => alert('拒绝功能开发中...')}
+                onClick={() => rejectPost(sub.id)}
                 style={{
                   padding: '10px 20px',
                   background: '#fef2f2',
