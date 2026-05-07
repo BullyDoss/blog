@@ -412,81 +412,65 @@ function AllPostsManager({ token, apiBase, onEdit }: { token: string; apiBase: s
 
   return (
     <div style={{ marginBottom: '3rem' }}>
-      <div style={{
-        background: 'white',
-        borderRadius: 8,
-        overflow: 'hidden',
-        border: '1px solid #e5e7eb',
-      }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ background: '#f9fafb', borderBottom: '2px solid #e5e7eb' }}>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: '0.85rem', color: '#374151' }}>标题</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: '0.85rem', color: '#374151' }}>频道</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: '0.85rem', color: '#374151' }}>时间</th>
-              <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, fontSize: '0.85rem', color: '#374151' }}>操作</th>
+      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <thead>
+          <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
+            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 500, fontSize: '0.85rem', color: '#6b7280' }}>标题</th>
+            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 500, fontSize: '0.85rem', color: '#6b7280' }}>频道</th>
+            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 500, fontSize: '0.85rem', color: '#6b7280' }}>时间</th>
+            <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 500, fontSize: '0.85rem', color: '#6b7280' }}>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {posts.map((post) => (
+            <tr key={post.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+              <td style={{ padding: '14px 16px', color: '#111827', fontSize: '0.9rem' }}>{post.title}</td>
+              <td style={{ padding: '14px 16px', color: '#6b7280', fontSize: '0.875rem' }}>
+                {CATEGORIES.find(c => c.id === post.category)?.label || post.category}
+              </td>
+              <td style={{ padding: '14px 16px', color: '#6b7280', fontSize: '0.875rem' }}>{new Date(post.created_at).toLocaleDateString('zh-CN')}</td>
+              <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                  <button
+                    onClick={() => onEdit(post)}
+                    style={{
+                      padding: '4px 14px',
+                      background: '#111827',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: 4,
+                      cursor: 'pointer',
+                      fontSize: '0.85rem',
+                      fontWeight: 500,
+                    }}
+                  >
+                    编辑
+                  </button>
+                  <button
+                    onClick={() => deletePost(post.id)}
+                    style={{
+                      padding: '4px 0',
+                      background: 'transparent',
+                      color: '#9ca3af',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: '0.85rem',
+                    }}
+                  >
+                    删除
+                  </button>
+                </div>
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {posts.map((post) => (
-              <tr key={post.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                <td style={{ padding: '14px 16px', fontWeight: 500, color: '#111827', fontSize: '0.9rem' }}>{post.title}</td>
-                <td style={{ padding: '14px 16px' }}>
-                  <span style={{
-                    display: 'inline-block',
-                    padding: '2px 10px',
-                    background: '#f3f4f6',
-                    color: '#6b7280',
-                    borderRadius: 4,
-                    fontSize: '0.8rem',
-                  }}>
-                    {CATEGORIES.find(c => c.id === post.category)?.label || post.category}
-                  </span>
-                </td>
-                <td style={{ padding: '14px 16px', color: '#6b7280', fontSize: '0.875rem' }}>{new Date(post.created_at).toLocaleDateString('zh-CN')}</td>
-                <td style={{ padding: '14px 16px', textAlign: 'right' }}>
-                  <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', alignItems: 'center' }}>
-                    <button
-                      onClick={() => onEdit(post)}
-                      style={{
-                        padding: '5px 14px',
-                        background: '#111827',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: 4,
-                        cursor: 'pointer',
-                        fontSize: '0.85rem',
-                        fontWeight: 500,
-                      }}
-                    >
-                      编辑
-                    </button>
-                    <button
-                      onClick={() => deletePost(post.id)}
-                      style={{
-                        padding: '5px 14px',
-                        background: 'transparent',
-                        color: '#6b7280',
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontSize: '0.85rem',
-                      }}
-                    >
-                      删除
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+          ))}
+        </tbody>
+      </table>
 
-        {posts.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '3rem', color: '#9ca3af' }}>
-            暂无文章
-          </div>
-        )}
-      </div>
+      {posts.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '4rem', color: '#9ca3af' }}>
+          暂无文章
+        </div>
+      )}
     </div>
   );
 }
