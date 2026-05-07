@@ -80,12 +80,13 @@ function LoginForm({ onSuccess, apiBase }: { onSuccess: (token: string) => void;
         });
       } catch (fetchErr: any) {
         clearTimeout(timeoutId);
+        console.error('[Admin Login] 网络错误:', fetchErr.message);
         if (fetchErr.name === 'AbortError') {
-          setError('[ERROR] 连接超时 (15秒)\n\n可能原因：\n- Worker 未正确部署\n- 网络防火墙阻止\n- API 地址错误');
+          setError(`连接超时\n\n请检查:\n- API地址: ${apiBase}\n- Worker是否已部署`);
         } else if (fetchErr.message.includes('Failed to fetch') || fetchErr.message.includes('NetworkError')) {
-          setError('[ERROR] 网络请求失败\n\n请检查：\n1. 刷新页面重试\n2. 检查网络连接\n3. 如果问题持续请联系管理员');
+          setError(`网络请求失败 (${fetchErr.message})\n\n请检查:\n1. API域名是否正确: ${apiBase}\n2. Worker是否已部署\n3. 浏览器控制台(F12)查看详情`);
         } else {
-          setError(`[ERROR] 网络错误: ${fetchErr.message}`);
+          setError(`网络错误: ${fetchErr.message}`);
         }
         return;
       }
@@ -108,7 +109,7 @@ function LoginForm({ onSuccess, apiBase }: { onSuccess: (token: string) => void;
       const data = JSON.parse(responseText);
       onSuccess(data.token);
     } catch (err: any) {
-      setError(`[ERROR] ${err.message}`);
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -283,7 +284,7 @@ function AdminPanel({ token, onLogout, apiBase }: { token: string; onLogout: () 
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f9fafb' }}>
+    <div style={{ minHeight: '100vh', background: '#fff' }}>
       {/* Header */}
       <header style={{
         background: '#111827',
@@ -343,7 +344,7 @@ function AdminPanel({ token, onLogout, apiBase }: { token: string; onLogout: () 
       </header>
 
       {/* Content */}
-      <div style={{ padding: '2rem 2.5rem', maxWidth: '100%' }}>
+      <div style={{ padding: '2rem 2.5rem' }}>
         {showEditor ? (
           <PostEditor
             token={token}
@@ -354,7 +355,7 @@ function AdminPanel({ token, onLogout, apiBase }: { token: string; onLogout: () 
           />
         ) : (
           <>
-            <AllPostsManager token={token} apiBase={apiBase} onEdit={handleEditPost} onRefresh={() => {}} />
+            <AllPostsManager token={token} apiBase={apiBase} onEdit={handleEditPost} />
             <SubmissionsManager token={token} apiBase={apiBase} />
           </>
         )}
@@ -369,35 +370,42 @@ function AllPostsManager({ token, apiBase, onEdit }: { token: string; apiBase: s
   const [errorMsg, setErrorMsg] = React.useState('');
   const [deletingId, setDeletingId] = React.useState<number | null>(null);
 
-  const apiCall = async (url: string, options?: RequestInit) => {
-    const res = await fetch(url, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-        ...(options?.headers || {}),
-      },
-    });
-    if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      let errDetail = '';
-      try { errDetail = JSON.parse(text).error || ''; } catch {}
-      throw new Error(errDetail || `HTTP ${res.status}`);
+  const safeFetch = async (url: string, options?: RequestInit) => {
+    try {
+      const res = await fetch(url, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          ...(options?.headers || {}),
+        },
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        let errDetail = '';
+        try { errDetail = JSON.parse(text).error || ''; } catch {}
+        throw new Error(errDetail || `HTTP ${res.status}`);
+      }
+      return res;
+    } catch (err: any) {
+      if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError') || err.message.includes('Load failed')) {
+        throw new Error(`无法连接API (${url})\n\n可能原因:\n1. Worker未部署或崩溃(缺少D1/R2绑定)\n2. 域名DNS未生效\n3. CORS配置问题\n\n当前API地址: ${apiBase}`);
+      }
+      throw err;
     }
-    return res;
   };
 
   const fetchPosts = async () => {
     setLoading(true);
     setErrorMsg('');
     try {
-      const response = await apiCall(`${apiBase}/api/admin/posts`);
+      const response = await safeFetch(`${apiBase}/api/admin/posts`);
       const data = await response.json();
       console.log('[Admin] 获取文章成功:', data.length, '条');
       setPosts(data.filter((p: any) => p.category !== 'submit'));
     } catch (err: any) {
       console.error('[Admin] 获取文章失败:', err);
-      setErrorMsg(`获取文章失败: ${err.message}`);
+      setErrorMsg(err.message);
     } finally {
       setLoading(false);
     }
@@ -411,12 +419,12 @@ function AllPostsManager({ token, apiBase, onEdit }: { token: string; apiBase: s
     if (!confirm('确定要删除这篇文章吗？')) return;
     setDeletingId(postId);
     try {
-      await apiCall(`${apiBase}/api/admin/posts/${postId}`, { method: 'DELETE' });
+      await safeFetch(`${apiBase}/api/admin/posts/${postId}`, { method: 'DELETE' });
       console.log('[Admin] 删除成功:', postId);
       setPosts(posts.filter(p => p.id !== postId));
     } catch (err: any) {
       console.error('[Admin] 删除失败:', err);
-      alert(`删除失败: ${err.message}`);
+      alert(err.message);
     } finally {
       setDeletingId(null);
     }
@@ -433,34 +441,37 @@ function AllPostsManager({ token, apiBase, onEdit }: { token: string; apiBase: s
           background: '#fef2f2',
           border: '1px solid #fecaca',
           color: '#dc2626',
-          padding: '10px 16px',
+          padding: '12px 16px',
           borderRadius: 6,
-          marginBottom: '1rem',
+          marginBottom: '1.25rem',
           fontSize: '0.875rem',
+          lineHeight: 1.6,
+          whiteSpace: 'pre-line',
         }}>
           {errorMsg}
         </div>
       )}
 
+      {/* 图2 风格表格 */}
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr>
-            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 500, fontSize: '0.85rem', color: '#9ca3af', borderBottom: '1px solid #e5e7eb' }}>标题</th>
-            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 500, fontSize: '0.85rem', color: '#9ca3af', borderBottom: '1px solid #e5e7eb' }}>频道</th>
-            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 500, fontSize: '0.85rem', color: '#9ca3af', borderBottom: '1px solid #e5e7eb' }}>时间</th>
-            <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 500, fontSize: '0.85rem', color: '#9ca3af', borderBottom: '1px solid #e5e7eb' }}>操作</th>
+            <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 400, fontSize: '0.85rem', color: '#9ca3af', borderBottom: '1px solid #e5e7eb' }}>标题</th>
+            <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 400, fontSize: '0.85rem', color: '#9ca3af', borderBottom: '1px solid #e5e7eb' }}>频道</th>
+            <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 400, fontSize: '0.85rem', color: '#9ca3af', borderBottom: '1px solid #e5e7eb' }}>时间</th>
+            <th style={{ padding: '10px 16px', textAlign: 'right', fontWeight: 400, fontSize: '0.85rem', color: '#9ca3af', borderBottom: '1px solid #e5e7eb' }}>操作</th>
           </tr>
         </thead>
         <tbody>
           {posts.map((post) => (
             <tr key={post.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-              <td style={{ padding: '14px 16px', color: '#111827', fontSize: '0.9rem' }}>{post.title}</td>
-              <td style={{ padding: '14px 16px', color: '#9ca3af', fontSize: '0.875rem' }}>
+              <td style={{ padding: '13px 16px', color: '#111827', fontSize: '0.9rem' }}>{post.title}</td>
+              <td style={{ padding: '13px 16px', color: '#9ca3af', fontSize: '0.85rem' }}>
                 {CATEGORIES.find(c => c.id === post.category)?.label || post.category}
               </td>
-              <td style={{ padding: '14px 16px', color: '#9ca3af', fontSize: '0.875rem' }}>{new Date(post.created_at).toLocaleDateString('zh-CN')}</td>
-              <td style={{ padding: '14px 16px', textAlign: 'right' }}>
-                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+              <td style={{ padding: '13px 16px', color: '#9ca3af', fontSize: '0.85rem' }}>{new Date(post.created_at).toLocaleDateString('zh-CN')}</td>
+              <td style={{ padding: '13px 16px', textAlign: 'right' }}>
+                <span style={{ display: 'inline-flex', gap: '1rem', alignItems: 'center' }}>
                   <button
                     onClick={() => onEdit(post)}
                     style={{
@@ -470,7 +481,7 @@ function AllPostsManager({ token, apiBase, onEdit }: { token: string; apiBase: s
                       border: 'none',
                       borderRadius: 4,
                       cursor: 'pointer',
-                      fontSize: '0.85rem',
+                      fontSize: '0.82rem',
                       fontWeight: 500,
                     }}
                   >
@@ -485,12 +496,12 @@ function AllPostsManager({ token, apiBase, onEdit }: { token: string; apiBase: s
                       color: deletingId === post.id ? '#d1d5db' : '#9ca3af',
                       border: 'none',
                       cursor: deletingId === post.id ? 'not-allowed' : 'pointer',
-                      fontSize: '0.85rem',
+                      fontSize: '0.82rem',
                     }}
                   >
-                    {deletingId === post.id ? '删除中...' : '删除'}
+                    {deletingId === post.id ? '...' : '删除'}
                   </button>
-                </div>
+                </span>
               </td>
             </tr>
           ))}
@@ -535,22 +546,29 @@ function PostEditor({ token, apiBase, post, onSave, onCancel }: {
     }
   }, [post]);
 
-  const apiCall = async (url: string, options?: RequestInit) => {
-    const res = await fetch(url, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-        ...(options?.headers || {}),
-      },
-    });
-    if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      let errDetail = '';
-      try { errDetail = JSON.parse(text).error || ''; } catch {}
-      throw new Error(errDetail || `HTTP ${res.status}`);
+  const safeFetch = async (url: string, options?: RequestInit) => {
+    try {
+      const res = await fetch(url, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          ...(options?.headers || {}),
+        },
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        let errDetail = '';
+        try { errDetail = JSON.parse(text).error || ''; } catch {}
+        throw new Error(errDetail || `HTTP ${res.status}`);
+      }
+      return res;
+    } catch (err: any) {
+      if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+        throw new Error(`无法连接API\n\n当前API: ${apiBase}\n请确认Worker已正确部署且绑定了D1数据库`);
+      }
+      throw err;
     }
-    return res;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -563,29 +581,23 @@ function PostEditor({ token, apiBase, post, onSave, onCancel }: {
 
     setSaving(true);
     setError('');
-    console.log('[Admin] 提交文章:', post ? '更新' : '创建', formData);
 
     try {
-      let response: Response;
       if (post) {
-        response = await apiCall(`${apiBase}/api/admin/posts/${post.id}`, {
+        await safeFetch(`${apiBase}/api/admin/posts/${post.id}`, {
           method: 'PUT',
           body: JSON.stringify(formData),
         });
       } else {
-        response = await apiCall(`${apiBase}/api/admin/posts`, {
+        await safeFetch(`${apiBase}/api/admin/posts`, {
           method: 'POST',
           body: JSON.stringify(formData),
         });
       }
-
-      const result = await response.json().catch(() => ({}));
-      console.log('[Admin] 操作成功:', result);
       alert(post ? '更新成功' : '创建成功');
       onSave();
     } catch (err: any) {
-      console.error('[Admin] 操作失败:', err);
-      setError(`[ERROR] ${err.message}`);
+      setError(err.message);
     } finally {
       setSaving(false);
     }
@@ -603,15 +615,8 @@ function PostEditor({ token, apiBase, post, onSave, onCancel }: {
   };
 
   return (
-    <div style={{
-      background: 'white',
-      borderRadius: 8,
-      padding: '2rem',
-      boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-      border: '1px solid #e5e7eb',
-      maxWidth: 800,
-    }}>
-      <h2 style={{ margin: '0 0 1.5rem', color: '#111827', fontSize: '1.25rem', fontWeight: 600 }}>
+    <div style={{ maxWidth: 800 }}>
+      <h2 style={{ margin: '0 0 1.5rem', color: '#111827', fontSize: '1.15rem', fontWeight: 600 }}>
         {post ? '编辑文章' : '写新文章'}
       </h2>
 
@@ -623,24 +628,18 @@ function PostEditor({ token, apiBase, post, onSave, onCancel }: {
           padding: '12px 16px',
           borderRadius: 6,
           marginBottom: '1.5rem',
-          fontSize: '0.9rem',
+          fontSize: '0.875rem',
+          lineHeight: 1.6,
         }}>
           {error}
         </div>
       )}
 
       <form onSubmit={handleSubmit}>
+        {/* 标题 + URL Slug 并排 */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.25rem' }}>
           <div>
-            <label style={{
-              display: 'block',
-              fontWeight: 500,
-              fontSize: '0.875rem',
-              color: '#374151',
-              marginBottom: '0.5rem',
-            }}>
-              标题
-            </label>
+            <label style={{ display: 'block', fontWeight: 500, fontSize: '0.85rem', color: '#374151', marginBottom: '0.4rem' }}>标题</label>
             <input
               type="text"
               value={formData.title}
@@ -649,70 +648,38 @@ function PostEditor({ token, apiBase, post, onSave, onCancel }: {
               required
               disabled={saving}
               style={{
-                width: '100%',
-                padding: '8px 12px',
-                border: '1px solid #d1d5db',
-                borderRadius: 4,
-                fontSize: '0.95rem',
-                boxSizing: 'border-box',
-                outline: 'none',
+                width: '100%', padding: '8px 12px', border: '1px solid #d1d5db',
+                borderRadius: 4, fontSize: '0.92rem', boxSizing: 'border-box', outline: 'none',
               }}
             />
           </div>
-
           <div>
-            <label style={{
-              display: 'block',
-              fontWeight: 500,
-              fontSize: '0.875rem',
-              color: '#374151',
-              marginBottom: '0.5rem',
-            }}>
-              URL Slug
-            </label>
+            <label style={{ display: 'block', fontWeight: 500, fontSize: '0.85rem', color: '#374151', marginBottom: '0.4rem' }}>URL Slug (slug)</label>
             <input
               type="text"
               value={formData.slug}
               onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
               onBlur={generateSlugFromTitle}
-              placeholder="url-slug"
+              placeholder="my-post"
               disabled={saving}
               style={{
-                width: '100%',
-                padding: '8px 12px',
-                border: '1px solid #d1d5db',
-                borderRadius: 4,
-                fontSize: '0.95rem',
-                fontFamily: 'monospace',
-                boxSizing: 'border-box',
-                outline: 'none',
+                width: '100%', padding: '8px 12px', border: '1px solid #d1d5db',
+                borderRadius: 4, fontSize: '0.92rem', fontFamily: 'monospace', boxSizing: 'border-box', outline: 'none',
               }}
             />
           </div>
         </div>
 
+        {/* 所属频道 */}
         <div style={{ marginBottom: '1.25rem' }}>
-          <label style={{
-            display: 'block',
-            fontWeight: 500,
-            fontSize: '0.875rem',
-            color: '#374151',
-            marginBottom: '0.5rem',
-          }}>
-            所属频道
-          </label>
+          <label style={{ display: 'block', fontWeight: 500, fontSize: '0.85rem', color: '#374151', marginBottom: '0.4rem' }}>所属频道</label>
           <select
             value={formData.category}
             onChange={(e) => setFormData({ ...formData, category: e.target.value })}
             disabled={saving}
             style={{
-              width: '200px',
-              padding: '8px 12px',
-              border: '1px solid #d1d5db',
-              borderRadius: 4,
-              fontSize: '0.95rem',
-              outline: 'none',
-              background: 'white',
+              width: '200px', padding: '8px 12px', border: '1px solid #d1d5db',
+              borderRadius: 4, fontSize: '0.92rem', outline: 'none', background: 'white',
             }}
           >
             {CATEGORIES.map((cat) => (
@@ -721,16 +688,9 @@ function PostEditor({ token, apiBase, post, onSave, onCancel }: {
           </select>
         </div>
 
+        {/* 摘要 */}
         <div style={{ marginBottom: '1.25rem' }}>
-          <label style={{
-            display: 'block',
-            fontWeight: 500,
-            fontSize: '0.875rem',
-            color: '#374151',
-            marginBottom: '0.5rem',
-          }}>
-            摘要
-          </label>
+          <label style={{ display: 'block', fontWeight: 500, fontSize: '0.85rem', color: '#374151', marginBottom: '0.4rem' }}>摘要</label>
           <input
             type="text"
             value={formData.excerpt}
@@ -738,46 +698,15 @@ function PostEditor({ token, apiBase, post, onSave, onCancel }: {
             placeholder="简短描述..."
             disabled={saving}
             style={{
-              width: '100%',
-              padding: '8px 12px',
-              border: '1px solid #d1d5db',
-              borderRadius: 4,
-              fontSize: '0.95rem',
-              boxSizing: 'border-box',
-              outline: 'none',
+              width: '100%', padding: '8px 12px', border: '1px solid #d1d5db',
+              borderRadius: 4, fontSize: '0.92rem', boxSizing: 'border-box', outline: 'none',
             }}
           />
         </div>
 
-        <div style={{ marginBottom: '1.5rem' }}>
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '0.5rem',
-          }}>
-            <label style={{
-              fontWeight: 500,
-              fontSize: '0.875rem',
-              color: '#374151',
-            }}>
-              正文 (Markdown)
-            </label>
-            <button
-              type="button"
-              style={{
-                padding: '4px 12px',
-                background: '#f3f4f6',
-                border: '1px solid #d1d5db',
-                borderRadius: 4,
-                cursor: 'pointer',
-                fontSize: '0.8rem',
-                color: '#374151',
-              }}
-            >
-              插入图片
-            </button>
-          </div>
+        {/* 正文 */}
+        <div style={{ marginBottom: '1.75rem' }}>
+          <label style={{ display: 'block', fontWeight: 500, fontSize: '0.85rem', color: '#374151', marginBottom: '0.4rem' }}>正文 (Markdown)</label>
           <textarea
             value={formData.content}
             onChange={(e) => setFormData({ ...formData, content: e.target.value })}
@@ -786,34 +715,24 @@ function PostEditor({ token, apiBase, post, onSave, onCancel }: {
             disabled={saving}
             rows={12}
             style={{
-              width: '100%',
-              padding: '10px 12px',
-              border: '1px solid #d1d5db',
-              borderRadius: 4,
-              fontSize: '0.95rem',
-              lineHeight: 1.6,
-              boxSizing: 'border-box',
-              fontFamily: 'monospace',
-              resize: 'vertical',
-              outline: 'none',
+              width: '100%', padding: '10px 12px', border: '1px solid #d1d5db',
+              borderRadius: 4, fontSize: '0.92rem', lineHeight: 1.65,
+              boxSizing: 'border-box', fontFamily: 'monospace', resize: 'vertical', outline: 'none',
             }}
           />
         </div>
 
-        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'space-between' }}>
+        {/* 按钮：发布 + 取消 */}
+        <div style={{ display: 'flex', gap: '1rem' }}>
           <button
             type="submit"
             disabled={saving}
             style={{
-              flex: 1,
-              padding: '12px',
+              flex: 1, padding: '11px',
               background: saving ? '#9ca3af' : '#111827',
-              color: 'white',
-              border: 'none',
-              borderRadius: 4,
+              color: 'white', border: 'none', borderRadius: 4,
               cursor: saving ? 'not-allowed' : 'pointer',
-              fontWeight: 500,
-              fontSize: '0.95rem',
+              fontWeight: 500, fontSize: '0.92rem',
             }}
           >
             {saving ? '保存中...' : '发布'}
@@ -823,14 +742,11 @@ function PostEditor({ token, apiBase, post, onSave, onCancel }: {
             onClick={onCancel}
             disabled={saving}
             style={{
-              padding: '12px 32px',
-              background: '#fff',
-              color: '#374151',
-              border: '1px solid #d1d5db',
-              borderRadius: 4,
+              padding: '11px 32px',
+              background: '#fff', color: '#374151',
+              border: '1px solid #d1d5db', borderRadius: 4,
               cursor: saving ? 'not-allowed' : 'pointer',
-              fontSize: '0.95rem',
-              fontWeight: 500,
+              fontWeight: 500, fontSize: '0.92rem',
             }}
           >
             取消
@@ -845,7 +761,7 @@ function SubmissionsManager({ token, apiBase }: { token: string; apiBase: string
   const [submissions, setSubmissions] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
 
-  const apiCall = async (url: string, options?: RequestInit) => {
+  const safeFetch = async (url: string, options?: RequestInit) => {
     const res = await fetch(url, {
       ...options,
       headers: {
@@ -866,7 +782,7 @@ function SubmissionsManager({ token, apiBase }: { token: string; apiBase: string
   const fetchSubmissions = async () => {
     setLoading(true);
     try {
-      const response = await apiCall(`${apiBase}/api/admin/posts?category=submit&status=pending`);
+      const response = await safeFetch(`${apiBase}/api/admin/posts?category=submit&status=pending`);
       const data = await response.json();
       setSubmissions(data.filter((p: any) => p.status === 'pending'));
     } catch (err) {
@@ -883,11 +799,9 @@ function SubmissionsManager({ token, apiBase }: { token: string; apiBase: string
   const approvePost = async (postId: number) => {
     if (!confirm('确定要批准这篇投稿吗？')) return;
     try {
-      await apiCall(`${apiBase}/api/admin/posts/${postId}/approve`, { method: 'PUT' });
-      console.log('[Admin] 批准成功:', postId);
+      await safeFetch(`${apiBase}/api/admin/posts/${postId}/approve`, { method: 'PUT' });
       setSubmissions(submissions.filter(s => s.id !== postId));
     } catch (err: any) {
-      console.error('[Admin] 批准失败:', err);
       alert(`操作失败: ${err.message}`);
     }
   };
@@ -895,11 +809,9 @@ function SubmissionsManager({ token, apiBase }: { token: string; apiBase: string
   const rejectPost = async (postId: number) => {
     if (!confirm('确定要拒绝这篇投稿吗？')) return;
     try {
-      await apiCall(`${apiBase}/api/admin/posts/${postId}/reject`, { method: 'PUT' });
-      console.log('[Admin] 拒绝成功:', postId);
+      await safeFetch(`${apiBase}/api/admin/posts/${postId}/reject`, { method: 'PUT' });
       setSubmissions(submissions.filter(s => s.id !== postId));
     } catch (err: any) {
-      console.error('[Admin] 拒绝失败:', err);
       alert(`操作失败: ${err.message}`);
     }
   };
@@ -910,41 +822,30 @@ function SubmissionsManager({ token, apiBase }: { token: string; apiBase: string
 
   return (
     <div>
-      <h2 style={{ margin: '0 0 1.5rem', color: '#111827', fontSize: '1.125rem', fontWeight: 600 }}>
+      <h2 style={{ margin: '2rem 0 1.25rem', color: '#111827', fontSize: '1rem', fontWeight: 600 }}>
         待审核投稿 ({submissions.length})
       </h2>
 
-      <div style={{ display: 'grid', gap: '1rem' }}>
+      <div style={{ display: 'grid', gap: '0.75rem' }}>
         {submissions.map((sub) => (
           <div key={sub.id} style={{
-            background: 'white',
-            border: '1px solid #e5e7eb',
-            borderRadius: 8,
-            padding: '1.25rem',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            paddingBottom: '0.75rem', borderBottom: '1px solid #f3f4f6',
           }}>
-            <div style={{ flex: 1 }}>
-              <h3 style={{ margin: '0 0 0.375rem', color: '#111827', fontSize: '1rem', fontWeight: 600 }}>
+            <div>
+              <div style={{ fontWeight: 600, color: '#111827', fontSize: '0.9rem', marginBottom: '0.2rem' }}>
                 {sub.title}
-              </h3>
-              <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: 0 }}>
+              </div>
+              <div style={{ color: '#9ca3af', fontSize: '0.82rem' }}>
                 作者: {sub.author || '匿名'} | {new Date(sub.created_at).toLocaleDateString('zh-CN')}
-              </p>
+              </div>
             </div>
             <div style={{ display: 'flex', gap: '0.5rem', marginLeft: '2rem' }}>
               <button
                 onClick={() => approvePost(sub.id)}
                 style={{
-                  padding: '6px 16px',
-                  background: '#111827',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: 4,
-                  cursor: 'pointer',
-                  fontSize: '0.85rem',
-                  fontWeight: 500,
+                  padding: '5px 16px', background: '#111827', color: 'white',
+                  border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: '0.82rem', fontWeight: 500,
                 }}
               >
                 批准
@@ -952,14 +853,8 @@ function SubmissionsManager({ token, apiBase }: { token: string; apiBase: string
               <button
                 onClick={() => rejectPost(sub.id)}
                 style={{
-                  padding: '6px 16px',
-                  background: '#fff',
-                  color: '#dc2626',
-                  border: '1px solid #fecaca',
-                  borderRadius: 4,
-                  cursor: 'pointer',
-                  fontSize: '0.85rem',
-                  fontWeight: 500,
+                  padding: '5px 16px', background: '#fff', color: '#dc2626',
+                  border: '1px solid #fecaca', borderRadius: 4, cursor: 'pointer', fontSize: '0.82rem', fontWeight: 500,
                 }}
               >
                 拒绝
