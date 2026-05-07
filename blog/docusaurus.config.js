@@ -48,7 +48,7 @@ module.exports = {
       logo: {
         alt: 'BullyDoss',
         src: 'img/duck.png',
-        href: '/admin',
+        href: '/',
       },
       items: [],
     },

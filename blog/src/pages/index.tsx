@@ -17,12 +17,21 @@ const CATEGORIES = [
   { id: 'submit', label: '投稿专区', desc: '精选投稿内容展示' },
 ];
 
+function formatDate(dateStr: string | null | undefined) {
+  if (!dateStr) return '-';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime()) || d.getFullYear() < 2000 || d.getFullYear() > 2100) return '-';
+  return d.toLocaleDateString('zh-CN');
+}
+
 function BlogLayout() {
   const [activeCategory, setActiveCategory] = useState('notes');
   const [selectedPostId, setSelectedPostId] = useState<number | null>(null);
   const [showSubmitForm, setShowSubmitForm] = useState(false);
   const [allPosts, setAllPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   const getApiBase = () => {
     if (typeof window !== 'undefined' && window.__CONFIG__) {
@@ -50,287 +59,280 @@ function BlogLayout() {
     }
   };
 
+  let displayPosts = allPosts;
+  if (searchQuery.trim()) {
+    const q = searchQuery.toLowerCase().trim();
+    displayPosts = allPosts.filter(p =>
+      p.title?.toLowerCase().includes(q) ||
+      p.excerpt?.toLowerCase().includes(q) ||
+      p.content?.toLowerCase().includes(q)
+    );
+  }
+
   const currentCategory = CATEGORIES.find(c => c.id === activeCategory);
-  const categoryPosts = allPosts.filter(p => p.category === activeCategory);
+  const categoryPosts = displayPosts.filter(p => p.category === activeCategory);
   const selectedPost = allPosts.find(p => p.id === selectedPostId);
 
   const handlePostClick = (post: any) => {
     setSelectedPostId(post.id);
     setActiveCategory(post.category);
+    setIsMobileSidebarOpen(false);
   };
 
   const handleBackToList = () => {
     setSelectedPostId(null);
   };
 
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
   return (
     <div style={{
-      display: 'flex',
       minHeight: 'calc(100vh - 60px)',
-      marginTop: '0',
+      background: '#fff',
     }}>
-      {/* Left Sidebar - Fixed */}
-      <aside style={{
-        width: '280px',
-        flexShrink: 0,
-        borderRight: '1px solid #e5e7eb',
-        background: '#fff',
-        overflowY: 'auto',
-        position: 'sticky',
-        top: '0',
-        height: 'calc(100vh - 60px)',
+      {/* Top Search Bar */}
+      <div style={{
+        borderBottom: '1px solid #e5e7eb',
+        padding: '0.6rem 2rem',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '1rem',
+        background: '#fafafa',
       }}>
-        {/* Sidebar Header */}
-        <div style={{
-          padding: '1.5rem 1.25rem',
-          borderBottom: '1px solid #e5e7eb',
-          fontWeight: 600,
-          fontSize: '0.9rem',
-          color: '#374151',
-        }}>
-          文章导航
+        {/* Mobile hamburger */}
+        {isMobile && (
+          <button
+            onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+            style={{ background: 'none', border: 'none', fontSize: '1.3rem', cursor: 'pointer', padding: '4px 8px', color: '#374151' }}
+          >
+            ☰
+          </button>
+        )}
+        <div style={{ flex: 1, maxWidth: 480 }}>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="搜索文章..."
+            style={{
+              width: '100%',
+              padding: '8px 14px',
+              border: '1px solid #d1d5db',
+              borderRadius: 20,
+              fontSize: '0.88rem',
+              outline: 'none',
+              background: '#fff',
+              boxSizing: 'border-box',
+            }}
+          />
         </div>
+      </div>
 
-        {/* All Posts List */}
-        <div style={{ padding: '0' }}>
-          {loading ? (
-            <div style={{ textAlign: 'center', padding: '3rem', color: '#9ca3af', fontSize: '0.875rem' }}>
-              加载中...
-            </div>
-          ) : allPosts.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#9ca3af', fontSize: '0.85rem' }}>
-              暂无文章
-            </div>
-          ) : (
-            allPosts.map((post) => {
-              const isSelected = post.id === selectedPostId;
-              return (
-              <article
-                key={post.id}
-                onClick={() => handlePostClick(post)}
+      <div style={{ display: 'flex', position: 'relative' }}>
+        {/* Left Sidebar */}
+        <aside style={{
+          width: isMobile ? (isMobileSidebarOpen ? '260px' : '0') : '260px',
+          flexShrink: 0,
+          borderRight: isMobile ? 'none' : '1px solid #e5e7eb',
+          background: '#fff',
+          overflowY: 'auto',
+          height: isMobile ? 'auto' : 'calc(100vh - 110px)',
+          position: isMobile ? 'fixed' : 'sticky',
+          top: isMobile ? '52px' : '0',
+          left: isMobile ? 0 : 'auto',
+          zIndex: isMobile ? 50 : 1,
+          transition: 'width 0.2s ease',
+          boxShadow: isMobile && isMobileSidebarOpen ? '2px 0 12px rgba(0,0,0,0.08)' : 'none',
+          overflowX: 'hidden',
+        }} onClick={() => { if (isMobile && isMobileSidebarOpen) setIsMobileSidebarOpen(false); }}>
+          {!isMobile || isMobileSidebarOpen ? (
+            <>
+              <div style={{
+                padding: '1.25rem 1rem',
+                borderBottom: '1px solid #e5e7eb',
+                fontWeight: 600,
+                fontSize: '0.85rem',
+                color: '#374151',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}>
+                文章导航
+                {isMobile && (
+                  <button onClick={(e) => { e.stopPropagation(); setIsMobileSidebarOpen(false); }}
+                    style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#9ca3af' }}>×</button>
+                )}
+              </div>
+
+              <div style={{ padding: '0' }}>
+                {loading ? (
+                  <div style={{ textAlign: 'center', padding: '2rem', color: '#9ca3af', fontSize: '0.85rem' }}>加载中...</div>
+                ) : displayPosts.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '2rem 1rem', color: '#9ca3af', fontSize: '0.82rem' }}>暂无文章</div>
+                ) : (
+                  displayPosts.map((post) => {
+                    const isSelected = post.id === selectedPostId;
+                    return (
+                      <article key={post.id} onClick={(e) => { e.stopPropagation(); handlePostClick(post); }}
+                        style={{
+                          padding: '0.75rem 1rem',
+                          cursor: 'pointer',
+                          borderBottom: '1px solid #f9fafb',
+                          transition: 'background 0.15s ease',
+                          background: isSelected ? '#111827' : (post.category === activeCategory && !selectedPostId ? '#f9fafb' : 'transparent'),
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '2px' }}>
+                          <span style={{
+                            display: 'inline-block', padding: '1px 5px', background: isSelected ? 'rgba(255,255,255,0.15)' : '#f3f4f6',
+                            color: isSelected ? '#d1d5db' : '#6b7280', borderRadius: 3, fontSize: '0.68rem',
+                            fontWeight: 500, whiteSpace: 'nowrap', flexShrink: 0, marginTop: '2px',
+                          }}>
+                            {CATEGORIES.find(c => c.id === post.category)?.label || post.category}
+                          </span>
+                          <span style={{
+                            fontSize: '0.84rem', color: isSelected ? '#fff' : '#374151',
+                            fontWeight: isSelected || (post.category === activeCategory && !selectedPostId) ? 600 : 400,
+                            lineHeight: 1.35, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          }}>{post.title}</span>
+                        </div>
+                        <div style={{ textAlign: 'right', fontSize: '0.72rem', color: isSelected ? '#9ca3af' : '#9ca3af', paddingLeft: '3.5rem' }}>
+                          {formatDate(post.created_at)}
+                        </div>
+                      </article>
+                    );
+                  })
+                )}
+              </div>
+            </>
+          ) : null}
+        </aside>
+
+        {/* Mobile overlay */}
+        {isMobile && isMobileSidebarOpen && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', zIndex: 40, top: '52px' }}
+            onClick={() => setIsMobileSidebarOpen(false)} />
+        )}
+
+        {/* Right Content Area */}
+        <main style={{
+          flex: 1,
+          overflowY: 'auto',
+          background: '#fff',
+          minWidth: 0,
+        }}>
+          {/* Category Tabs */}
+          <nav style={{
+            display: 'flex',
+            gap: isMobile ? '1rem' : '2rem',
+            padding: isMobile ? '0 1rem' : '0 2.5rem',
+            borderBottom: '1px solid #e5e7eb',
+            background: '#fff',
+            position: 'sticky',
+            top: 0,
+            zIndex: 10,
+            alignItems: 'center',
+            overflowX: 'auto',
+            WebkitOverflowScrolling: 'touch',
+          }}>
+            {CATEGORIES.map((cat) => (
+              <button key={cat.id}
+                onClick={() => { setActiveCategory(cat.id); setSelectedPostId(null); setShowSubmitForm(false); }}
                 style={{
-                  padding: '0.875rem 1.25rem',
+                  padding: isMobile ? '0.75rem 0' : '1rem 0',
+                  background: 'transparent',
+                  color: (activeCategory === 'submit' && !showSubmitForm) && cat.id === 'submit' ? '#111827' : (activeCategory === cat.id ? '#111827' : '#6b7280'),
+                  border: 'none',
+                  borderBottom: (activeCategory === 'submit' && !showSubmitForm) && cat.id === 'submit' ? '2px solid #111827' : (activeCategory === cat.id ? '2px solid #111827' : '2px solid transparent'),
                   cursor: 'pointer',
-                  borderBottom: '1px solid #f9fafb',
-                  transition: 'background 0.15s ease',
-                  background: isSelected ? '#111827' : (post.category === activeCategory && !selectedPostId ? '#f9fafb' : 'transparent'),
-                }}
-                onMouseEnter={(e) => {
-                  if (!isSelected && post.category !== activeCategory) {
-                    e.currentTarget.style.background = '#f9fafb';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isSelected && post.category !== activeCategory) {
-                    e.currentTarget.style.background = 'transparent';
-                  }
+                  fontSize: isMobile ? '0.88rem' : '0.95rem',
+                  fontWeight: ((activeCategory === 'submit' && !showSubmitForm) && cat.id === 'submit') ? 600 : (activeCategory === cat.id ? 600 : 400),
+                  transition: 'all 0.2s',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
                 }}
               >
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '0.625rem',
-                  marginBottom: '0.25rem',
-                }}>
-                  <span style={{
-                    display: 'inline-block',
-                    padding: '1px 6px',
-                    background: isSelected ? 'rgba(255,255,255,0.15)' : '#f3f4f6',
-                    color: isSelected ? '#d1d5db' : '#6b7280',
-                    borderRadius: 3,
-                    fontSize: '0.7rem',
-                    fontWeight: 500,
-                    whiteSpace: 'nowrap',
-                    flexShrink: 0,
-                    marginTop: '2px',
-                  }}>
-                    {CATEGORIES.find(c => c.id === post.category)?.label || post.category}
-                  </span>
-                  <span style={{
-                    fontSize: '0.875rem',
-                    color: isSelected ? '#fff' : '#374151',
-                    fontWeight: isSelected || (post.category === activeCategory && !selectedPostId) ? 600 : 400,
-                    lineHeight: 1.4,
-                    flex: 1,
-                  }}>
-                    {post.title}
-                  </span>
-                </div>
-                <div style={{
-                  textAlign: 'right',
-                  fontSize: '0.75rem',
-                  color: isSelected ? '#9ca3af' : '#9ca3af',
-                  paddingLeft: '4rem',
-                }}>
-                  {new Date(post.created_at).toLocaleDateString('zh-CN')}
-                </div>
-              </article>
-              );
-            })
-          )}
-        </div>
-      </aside>
+                {cat.label}
+              </button>
+            ))}
+            {activeCategory === 'submit' && (
+              <button onClick={() => setShowSubmitForm(!showSubmitForm)}
+                style={{
+                  padding: isMobile ? '0.4rem 1rem' : '0.5rem 1.25rem',
+                  background: showSubmitForm ? '#111827' : 'transparent',
+                  color: showSubmitForm ? '#fff' : '#6b7280',
+                  border: showSubmitForm ? 'none' : '1px solid #d1d5db',
+                  borderRadius: 4,
+                  cursor: 'pointer',
+                  fontSize: isMobile ? '0.8rem' : '0.85rem',
+                  fontWeight: showSubmitForm ? 500 : 400,
+                  transition: 'all 0.2s',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                }}
+              >
+                我要投稿
+              </button>
+            )}
+          </nav>
 
-      {/* Right Content Area */}
-      <main style={{
-        flex: 1,
-        overflowY: 'auto',
-        background: '#fff',
-      }}>
-        {/* Category Tabs */}
-        <nav style={{
-          display: 'flex',
-          gap: '2rem',
-          padding: '0 3rem',
-          borderBottom: '1px solid #e5e7eb',
-          background: '#fff',
-          position: 'sticky',
-          top: '0',
-          zIndex: 10,
-          alignItems: 'center',
-        }}>
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => { setActiveCategory(cat.id); setSelectedPostId(null); setShowSubmitForm(false); }}
-              style={{
-                padding: '1rem 0',
-                background: 'transparent',
-                color: (activeCategory === 'submit' && !showSubmitForm) && cat.id === 'submit' ? '#111827' : (activeCategory === cat.id ? '#111827' : '#6b7280'),
-                border: 'none',
-                borderBottom: (activeCategory === 'submit' && !showSubmitForm) && cat.id === 'submit' ? '2px solid #111827' : (activeCategory === cat.id ? '2px solid #111827' : '2px solid transparent'),
-                cursor: 'pointer',
-                fontSize: '0.95rem',
-                fontWeight: ((activeCategory === 'submit' && !showSubmitForm) && cat.id === 'submit') ? 600 : (activeCategory === cat.id ? 600 : 400),
-                transition: 'all 0.2s',
-              }}
-            >
-              {cat.label}
-            </button>
-          ))}
-          {activeCategory === 'submit' && (
-            <button
-              onClick={() => setShowSubmitForm(!showSubmitForm)}
-              style={{
-                padding: '0.5rem 1.25rem',
-                background: showSubmitForm ? '#111827' : 'transparent',
-                color: showSubmitForm ? '#fff' : '#6b7280',
-                border: showSubmitForm ? 'none' : '1px solid #d1d5db',
-                borderRadius: 4,
-                cursor: 'pointer',
-                fontSize: '0.85rem',
-                fontWeight: showSubmitForm ? 500 : 400,
-                transition: 'all 0.2s',
-              }}
-            >
-              我要投稿
-            </button>
-          )}
-        </nav>
+          {/* Content Area */}
+          <div style={{ padding: isMobile ? '1.5rem 1rem' : '2.5rem 3rem', minHeight: 'calc(100vh - 120px)' }}>
+            {loading ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#9ca3af' }}>加载中...</div>
+            ) : selectedPost ? (
+              <ArticleDetail post={selectedPost} categories={CATEGORIES} onBack={handleBackToList} apiBase={getApiBase()} isMobile={isMobile} />
+            ) : showSubmitForm && activeCategory === 'submit' ? (
+              <SubmitFormPanel apiBase={getApiBase()} onSuccess={() => { setShowSubmitForm(false); fetchAllPosts(); }} isMobile={isMobile} />
+            ) : (
+              <>
+                <header style={{ marginBottom: isMobile ? '1.5rem' : '2.5rem' }}>
+                  <h1 style={{ margin: '0 0 0.4rem', fontSize: isMobile ? '1.5rem' : '2rem', fontWeight: 700, color: '#111827' }}>
+                    {currentCategory?.label}
+                  </h1>
+                  {currentCategory?.desc && (
+                    <p style={{ margin: 0, fontSize: isMobile ? '0.88rem' : '1rem', color: '#6b7280' }}>{currentCategory?.desc}</p>
+                  )}
+                </header>
 
-        {/* Content: Detail View or Category List */}
-        <div style={{ padding: '3rem 4rem', minHeight: 'calc(100vh - 120px)' }}>
-          {loading ? (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              height: '100%',
-              color: '#9ca3af'
-            }}>
-              加载中...
-            </div>
-          ) : selectedPost ? (
-            <ArticleDetail
-              post={selectedPost}
-              categories={CATEGORIES}
-              onBack={handleBackToList}
-              apiBase={getApiBase()}
-            />
-          ) : showSubmitForm && activeCategory === 'submit' ? (
-            <SubmitFormPanel apiBase={getApiBase()} onSuccess={() => { setShowSubmitForm(false); fetchAllPosts(); }} />
-          ) : (
-            <>
-              {/* Category Header */}
-              <header style={{ marginBottom: '3rem' }}>
-                <h1 style={{
-                  margin: '0 0 0.5rem',
-                  fontSize: '2rem',
-                  fontWeight: 700,
-                  color: '#111827',
-                }}>
-                  {currentCategory?.label}
-                </h1>
-                {currentCategory?.desc && (
-                  <p style={{
-                    margin: 0,
-                    fontSize: '1rem',
-                    color: '#6b7280',
-                  }}>
-                    {currentCategory?.desc}
-                  </p>
+                {categoryPosts.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: isMobile ? '3rem 1rem' : '6rem 2rem', color: '#9ca3af', fontSize: isMobile ? '0.92rem' : '1rem' }}>
+                    还没有内容，快去后台发布吧
+                  </div>
+                ) : (
+                  <div style={{ maxWidth: '100%' }}>
+                    {categoryPosts.map((post) => (
+                      <article key={post.id} onClick={() => handlePostClick(post)}
+                        style={{
+                          marginBottom: isMobile ? '1.5rem' : '2.5rem',
+                          paddingBottom: isMobile ? '1.2rem' : '2rem',
+                          borderBottom: categoryPosts.indexOf(post) < categoryPosts.length - 1 ? '1px solid #f3f4f6' : 'none',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <h2 style={{ margin: '0 0 0.4rem', fontSize: isMobile ? '1.15rem' : '1.35rem', fontWeight: 600, color: '#111827' }}>
+                          {post.title}
+                        </h2>
+                        <p style={{ margin: '0 0 0.6rem', color: '#6b7280', fontSize: isMobile ? '0.88rem' : '0.95rem', lineHeight: 1.6 }}>
+                          {post.excerpt || '-'}
+                        </p>
+                        <div style={{ textAlign: 'right', fontSize: '0.82rem', color: '#9ca3af' }}>
+                          {formatDate(post.created_at)}
+                        </div>
+                      </article>
+                    ))}
+                  </div>
                 )}
-              </header>
-
-              {/* Posts List or Empty State */}
-              {categoryPosts.length === 0 ? (
-                <div style={{
-                  textAlign: 'center',
-                  padding: '6rem 2rem',
-                  color: '#9ca3af',
-                  fontSize: '1rem',
-                }}>
-                  还没有内容，快去后台发布吧
-                </div>
-              ) : (
-                <div style={{ maxWidth: '700px' }}>
-                  {categoryPosts.map((post) => (
-                    <article
-                      key={post.id}
-                      onClick={() => handlePostClick(post)}
-                      style={{
-                        marginBottom: '2.5rem',
-                        paddingBottom: '2rem',
-                        borderBottom: categoryPosts.indexOf(post) < categoryPosts.length - 1 ? '1px solid #f3f4f6' : 'none',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <h2 style={{
-                        margin: '0 0 0.5rem',
-                        fontSize: '1.35rem',
-                        fontWeight: 600,
-                        color: '#111827',
-                      }}>
-                        {post.title}
-                      </h2>
-                      <p style={{
-                        margin: '0 0 0.75rem',
-                        color: '#6b7280',
-                        fontSize: '0.95rem',
-                        lineHeight: 1.6,
-                      }}>
-                        {post.excerpt || '-'}
-                      </p>
-                      <div style={{
-                        textAlign: 'right',
-                        fontSize: '0.875rem',
-                        color: '#9ca3af',
-                      }}>
-                        {new Date(post.created_at).toLocaleDateString('zh-CN')}
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      </main>
+              </>
+            )}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }
 
-function SubmitFormPanel({ apiBase, onSuccess }: { apiBase: string; onSuccess: () => void }) {
+function SubmitFormPanel({ apiBase, onSuccess, isMobile }: { apiBase: string; onSuccess: () => void; isMobile: boolean }) {
   const [title, setTitle] = React.useState('');
   const [author, setAuthor] = React.useState('');
   const [content, setContent] = React.useState('');
@@ -347,41 +349,46 @@ function SubmitFormPanel({ apiBase, onSuccess }: { apiBase: string; onSuccess: (
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, author, content }),
       });
-      if (!res.ok) { const data = await res.json().catch(() => ({})); throw new Error(data.error || `HTTP ${res.status}`); }
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `HTTP ${res.status}`);
+      }
       setTitle(''); setAuthor(''); setContent('');
       alert('投稿成功，等待审核！');
       onSuccess();
-    } catch (err: any) { setError(err.message); } finally { setSubmitting(false); }
+    } catch (err: any) {
+      setError(`提交失败: ${err.message}\n\n当前API: ${apiBase}\n请确认Worker已部署且CORS已配置`);
+    } finally { setSubmitting(false); }
   };
 
   return (
-    <div style={{ maxWidth: 600 }}>
-      <h1 style={{ margin: '0 0 0.5rem', fontSize: '1.75rem', fontWeight: 700, color: '#111827' }}>我要投稿</h1>
-      <p style={{ margin: '0 0 2rem', fontSize: '0.95rem', color: '#6b7280' }}>分享你的想法、经验或故事，我们会审核后发布</p>
+    <div style={{ maxWidth: isMobile ? '100%' : 600, margin: '0 auto' }}>
+      <h1 style={{ margin: '0 0 0.4rem', fontSize: isMobile ? '1.4rem' : '1.75rem', fontWeight: 700, color: '#111827' }}>我要投稿</h1>
+      <p style={{ margin: '0 0 isMobile ? 1.5rem : 2rem', fontSize: '0.92rem', color: '#6b7280' }}>分享你的想法、经验或故事，我们会审核后发布</p>
 
-      {error && (<div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', padding: '10px 14px', borderRadius: 6, marginBottom: '1rem', fontSize: '0.875rem' }}>{error}</div>)}
+      {error && (<div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', padding: '10px 14px', borderRadius: 6, marginBottom: '1rem', fontSize: '0.85rem', lineHeight: 1.6, whiteSpace: 'pre-line' }}>{error}</div>)}
 
       <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: '1.25rem' }}>
-          <label style={{ display: 'block', fontWeight: 500, fontSize: '0.85rem', color: '#374151', marginBottom: '0.4rem' }}>标题</label>
+        <div style={{ marginBottom: '1.1rem' }}>
+          <label style={{ display: 'block', fontWeight: 500, fontSize: '0.85rem', color: '#374151', marginBottom: '0.35rem' }}>标题</label>
           <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="请输入标题" required disabled={submitting}
-            style={{ width: '100%', padding: '10px 14px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: '0.92rem', boxSizing: 'border-box', outline: 'none' }} />
+            style={{ width: '100%', padding: isMobile ? '10px 12px' : '10px 14px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: '0.92rem', boxSizing: 'border-box', outline: 'none' }} />
         </div>
 
-        <div style={{ marginBottom: '1.25rem' }}>
-          <label style={{ display: 'block', fontWeight: 500, fontSize: '0.85rem', color: '#374151', marginBottom: '0.4rem' }}>昵称</label>
+        <div style={{ marginBottom: '1.1rem' }}>
+          <label style={{ display: 'block', fontWeight: 500, fontSize: '0.85rem', color: '#374151', marginBottom: '0.35rem' }}>昵称</label>
           <input type="text" value={author} onChange={(e) => setAuthor(e.target.value)} placeholder="你的昵称" required disabled={submitting}
-            style={{ width: '100%', padding: '10px 14px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: '0.92rem', boxSizing: 'border-box', outline: 'none' }} />
+            style={{ width: '100%', padding: isMobile ? '10px 12px' : '10px 14px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: '0.92rem', boxSizing: 'border-box', outline: 'none' }} />
         </div>
 
-        <div style={{ marginBottom: '1.5rem' }}>
-          <label style={{ display: 'block', fontWeight: 500, fontSize: '0.85rem', color: '#374151', marginBottom: '0.4rem' }}>正文内容</label>
-          <textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="写下你想分享的内容..." required disabled={submitting} rows={8}
-            style={{ width: '100%', padding: '10px 14px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: '0.92rem', lineHeight: 1.65, boxSizing: 'border-box', resize: 'vertical', outline: 'none' }} />
+        <div style={{ marginBottom: '1.4rem' }}>
+          <label style={{ display: 'block', fontWeight: 500, fontSize: '0.85rem', color: '#374151', marginBottom: '0.35rem' }}>正文内容</label>
+          <textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="写下你想分享的内容..." required disabled={submitting} rows={isMobile ? 6 : 8}
+            style={{ width: '100%', padding: isMobile ? '10px 12px' : '10px 14px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: '0.92rem', lineHeight: 1.65, boxSizing: 'border-box', resize: 'vertical', outline: 'none' }} />
         </div>
 
         <button type="submit" disabled={submitting}
-          style={{ width: '100%', padding: '12px', background: submitting ? '#9ca3af' : '#111827', color: 'white', border: 'none', borderRadius: 6, cursor: submitting ? 'not-allowed' : 'pointer', fontWeight: 500, fontSize: '0.95rem' }}>
+          style={{ width: '100%', padding: isMobile ? '11px' : '12px', background: submitting ? '#9ca3af' : '#111827', color: 'white', border: 'none', borderRadius: 6, cursor: submitting ? 'not-allowed' : 'pointer', fontWeight: 500, fontSize: '0.95rem' }}>
           {submitting ? '提交中...' : '提交投稿'}
         </button>
       </form>
@@ -389,11 +396,8 @@ function SubmitFormPanel({ apiBase, onSuccess }: { apiBase: string; onSuccess: (
   );
 }
 
-function ArticleDetail({ post, categories, onBack, apiBase }: {
-  post: any;
-  categories: typeof CATEGORIES;
-  onBack: () => void;
-  apiBase: string;
+function ArticleDetail({ post, categories, onBack, apiBase, isMobile }: {
+  post: any; categories: typeof CATEGORIES; onBack: () => void; apiBase: string; isMobile: boolean;
 }) {
   const [comments, setComments] = useState<any[]>([]);
   const [commentName, setCommentName] = useState('');
@@ -401,9 +405,7 @@ function ArticleDetail({ post, categories, onBack, apiBase }: {
   const [submitting, setSubmitting] = useState(false);
   const [commentsLoading, setCommentsLoading] = useState(true);
 
-  useEffect(() => {
-    fetchComments();
-  }, [post.id]);
+  useEffect(() => { fetchComments(); }, [post.id]);
 
   const fetchComments = async () => {
     setCommentsLoading(true);
@@ -413,197 +415,77 @@ function ArticleDetail({ post, categories, onBack, apiBase }: {
         const data = await response.json();
         setComments(data.comments || []);
       }
-    } catch (err) {
-      console.error('Failed to fetch comments:', err);
-    } finally {
-      setCommentsLoading(false);
-    }
+    } catch (err) { console.error('Failed to fetch comments:', err); }
+    finally { setCommentsLoading(false); }
   };
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!commentName.trim() || !commentContent.trim()) return;
-
     setSubmitting(true);
     try {
       const response = await fetch(`${apiBase}/api/posts/${post.id}/comments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          author: commentName.trim(),
-          content: commentContent.trim(),
-        }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ author: commentName.trim(), content: commentContent.trim() }),
       });
-
-      if (response.ok) {
-        setCommentName('');
-        setCommentContent('');
-        fetchComments();
-      }
-    } catch (err) {
-      console.error('Failed to submit comment:', err);
-    } finally {
-      setSubmitting(false);
-    }
+      if (response.ok) { setCommentName(''); setCommentContent(''); fetchComments(); }
+    } catch (err) { console.error('Failed to submit comment:', err); }
+    finally { setSubmitting(false); }
   };
 
-  const postCategory = categories.find(c => c.id === post.category);
-
   return (
-    <div style={{ maxWidth: '720px' }}>
-      {/* Article Title & Meta */}
-      <header style={{ marginBottom: '2.5rem' }}>
-        <h1 style={{
-          margin: '0 0 0.5rem',
-          fontSize: '2rem',
-          fontWeight: 700,
-          color: '#111827',
-        }}>
-          {post.title}
-        </h1>
-        <p style={{
-          margin: 0,
-          fontSize: '0.95rem',
-          color: '#9ca3af',
-        }}>
-          {new Date(post.created_at).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })}
+    <div style={{ maxWidth: isMobile ? '100%' : '720px', margin: '0 auto' }}>
+      <header style={{ marginBottom: isMobile ? '1.5rem' : '2.5rem' }}>
+        <h1 style={{ margin: '0 0 0.4rem', fontSize: isMobile ? '1.5rem' : '2rem', fontWeight: 700, color: '#111827' }}>{post.title}</h1>
+        <p style={{ margin: 0, fontSize: '0.9rem', color: '#9ca3af' }}>
+          {formatDate(post.created_at)}
         </p>
       </header>
 
-      {/* Article Content */}
-      <article style={{
-        marginBottom: '4rem',
-        fontSize: '1rem',
-        lineHeight: 1.8,
-        color: '#374151',
-      }}>
+      <article style={{ marginBottom: isMobile ? '2.5rem' : '4rem', fontSize: isMobile ? '0.95rem' : '1rem', lineHeight: 1.8, color: '#374151' }}>
         <p style={{ margin: '0 0 1.25rem' }}>{post.excerpt || post.content || '-'}</p>
       </article>
 
-      {/* Divider */}
-      <hr style={{ border: 'none', borderTop: '1px solid #e5e7eb', margin: '0 0 2.5rem' }} />
+      <hr style={{ border: 'none', borderTop: '1px solid #e5e7eb', margin: '0 0 isMobile ? 1.5rem : 2.5rem' }} />
 
-      {/* Comments Section */}
       <section>
-        <h2 style={{
-          margin: '0 0 1.5rem',
-          fontSize: '1.125rem',
-          fontWeight: 600,
-          color: '#111827',
-        }}>
+        <h2 style={{ margin: '0 0 1.25rem', fontSize: isMobile ? '1rem' : '1.125rem', fontWeight: 600, color: '#111827' }}>
           评论 ({comments.length})
         </h2>
 
-        {/* Comments List */}
-        <div style={{ marginBottom: '2rem' }}>
-          {commentsLoading ? (
-            <div style={{ color: '#9ca3af', fontSize: '0.9rem' }}>加载评论中...</div>
-          ) : comments.length === 0 ? (
-            <div style={{ color: '#9ca3af', fontSize: '0.9rem' }}>暂无评论，快来抢沙发吧</div>
-          ) : (
-            comments.map((comment) => (
-              <div key={comment.id} style={{
-                display: 'flex',
-                gap: '0.75rem',
-                marginBottom: '1.5rem',
-                paddingBottom: '1.5rem',
-                borderBottom: '1px solid #f3f4f6',
-              }}>
+        <div style={{ marginBottom: isMobile ? '1.5rem' : '2rem' }}>
+          {commentsLoading ? (<div style={{ color: '#9ca3af', fontSize: '0.88rem' }}>加载评论中...</div>)
+            : comments.length === 0 ? (<div style={{ color: '#9ca3af', fontSize: '0.88rem' }}>暂无评论，快来抢沙发吧</div>)
+            : (comments.map((comment) => (
+              <div key={comment.id} style={{ display: 'flex', gap: '0.65rem', marginBottom: '1.25rem', paddingBottom: '1.25rem', borderBottom: '1px solid #f3f4f6' }}>
                 <div style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '50%',
-                  background: '#111827',
-                  color: '#fff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '0.85rem',
-                  fontWeight: 600,
-                  flexShrink: 0,
-                }}>
-                  {(comment.author || '匿')[0].toUpperCase()}
-                </div>
+                  width: isMobile ? '30px' : '36px', height: isMobile ? '30px' : '36px', borderRadius: '50%',
+                  background: '#111827', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: isMobile ? '0.78rem' : '0.85rem', fontWeight: 600, flexShrink: 0,
+                }}>{(comment.author || '匿')[0].toUpperCase()}</div>
                 <div style={{ flex: 1 }}>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'baseline',
-                    gap: '0.75rem',
-                    marginBottom: '0.375rem',
-                  }}>
-                    <span style={{ fontWeight: 600, fontSize: '0.9rem', color: '#111827' }}>
-                      {comment.author || '匿名'}
-                    </span>
-                    <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>
-                      {new Date(comment.created_at).toLocaleString('zh-CN')}
-                    </span>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.65rem', marginBottom: '0.3rem', flexWrap: 'wrap' }}>
+                    <span style={{ fontWeight: 600, fontSize: isMobile ? '0.85rem' : '0.9rem', color: '#111827' }}>{comment.author || '匿名'}</span>
+                    <span style={{ fontSize: isMobile ? '0.75rem' : '0.8rem', color: '#9ca3af' }}>{formatDate(comment.created_at)}</span>
                   </div>
-                  <p style={{ margin: 0, fontSize: '0.9rem', color: '#374151', lineHeight: 1.6 }}>
-                    {comment.content}
-                  </p>
+                  <p style={{ margin: 0, fontSize: isMobile ? '0.86rem' : '0.9rem', color: '#374151', lineHeight: 1.6 }}>{comment.content}</p>
                 </div>
               </div>
             ))
-          )}
+          ))}
         </div>
 
-        {/* Comment Form */}
         <form onSubmit={handleSubmitComment}>
-          <div style={{ marginBottom: '0.75rem' }}>
-            <input
-              type="text"
-              value={commentName}
-              onChange={(e) => setCommentName(e.target.value)}
-              placeholder="昵称"
-              required
-              style={{
-                width: '100%',
-                maxWidth: '240px',
-                padding: '10px 14px',
-                border: '1px solid #e5e7eb',
-                borderRadius: 6,
-                fontSize: '0.9rem',
-                boxSizing: 'border-box',
-                outline: 'none',
-                fontFamily: 'inherit',
-              }}
-            />
+          <div style={{ marginBottom: '0.65rem' }}>
+            <input type="text" value={commentName} onChange={(e) => setCommentName(e.target.value)} placeholder="昵称" required
+              style={{ width: '100%', maxWidth: isMobile ? '100%' : '240px', padding: '9px 13px', border: '1px solid #e5e7eb', borderRadius: 6, fontSize: '0.88rem', boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit' }} />
           </div>
-          <div style={{ marginBottom: '0.75rem' }}>
-            <textarea
-              value={commentContent}
-              onChange={(e) => setCommentContent(e.target.value)}
-              placeholder="写下你的想法..."
-              required
-              rows={4}
-              style={{
-                width: '100%',
-                padding: '10px 14px',
-                border: '1px solid #e5e7eb',
-                borderRadius: 6,
-                fontSize: '0.9rem',
-                lineHeight: 1.6,
-                boxSizing: 'border-box',
-                outline: 'none',
-                resize: 'vertical',
-                fontFamily: 'inherit',
-              }}
-            />
+          <div style={{ marginBottom: '0.65rem' }}>
+            <textarea value={commentContent} onChange={(e) => setCommentContent(e.target.value)} placeholder="写下你的想法..." required rows={isMobile ? 3 : 4}
+              style={{ width: '100%', padding: '9px 13px', border: '1px solid #e5e7eb', borderRadius: 6, fontSize: '0.88rem', lineHeight: 1.6, boxSizing: 'border-box', outline: 'none', resize: 'vertical', fontFamily: 'inherit' }} />
           </div>
-          <button
-            type="submit"
-            disabled={submitting}
-            style={{
-              padding: '10px 28px',
-              background: submitting ? '#9ca3af' : '#111827',
-              color: 'white',
-              border: 'none',
-              borderRadius: 6,
-              fontSize: '0.9rem',
-              fontWeight: 500,
-              cursor: submitting ? 'not-allowed' : 'pointer',
-            }}
-          >
+          <button type="submit" disabled={submitting}
+            style={{ padding: isMobile ? '9px 22px' : '10px 28px', background: submitting ? '#9ca3af' : '#111827', color: 'white', border: 'none', borderRadius: 6, fontSize: '0.88rem', fontWeight: 500, cursor: submitting ? 'not-allowed' : 'pointer' }}>
             {submitting ? '发布中...' : '发布'}
           </button>
         </form>

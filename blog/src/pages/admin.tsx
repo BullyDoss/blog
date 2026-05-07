@@ -193,25 +193,34 @@ function AdminPanel({ token, onLogout, apiBase }: { token: string; onLogout: () 
 
   return (
     <div style={{ minHeight: '100vh', background: '#fff' }}>
-      <header style={{ background: '#111827', color: 'white', padding: '0.7rem 2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>管理后台</h1>
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+      <header style={{
+        background: '#111827',
+        color: 'white',
+        padding: typeof window !== 'undefined' && window.innerWidth < 640 ? '0.6rem 1rem' : '0.7rem 2rem',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: '0.5rem',
+      }}>
+        <h1 style={{ margin: 0, fontSize: typeof window !== 'undefined' && window.innerWidth < 640 ? '0.88rem' : '1rem', fontWeight: 600 }}>管理后台</h1>
+        <div style={{ display: 'flex', gap: typeof window !== 'undefined' && window.innerWidth < 640 ? '0.35rem' : '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
           <button onClick={() => { setShowEditor(false); setEditingPost(null); }}
-            style={{ padding: '4px 14px', background: showEditor ? 'transparent' : 'rgba(255,255,255,0.15)', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: '0.85rem' }}>
+            style={{ padding: typeof window !== 'undefined' && window.innerWidth < 640 ? '3px 10px' : '4px 14px', background: showEditor ? 'transparent' : 'rgba(255,255,255,0.15)', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: typeof window !== 'undefined' && window.innerWidth < 640 ? '0.78rem' : '0.85rem' }}>
             文章管理
           </button>
           <button onClick={() => { setShowEditor(true); setEditingPost(null); }}
-            style={{ padding: '4px 14px', background: showEditor && !editingPost ? '#fff' : 'transparent', color: showEditor && !editingPost ? '#111827' : '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: '0.85rem', fontWeight: showEditor && !editingPost ? 500 : 400 }}>
+            style={{ padding: typeof window !== 'undefined' && window.innerWidth < 640 ? '3px 10px' : '4px 14px', background: showEditor && !editingPost ? '#fff' : 'transparent', color: showEditor && !editingPost ? '#111827' : '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: typeof window !== 'undefined' && window.innerWidth < 640 ? '0.78rem' : '0.85rem', fontWeight: showEditor && !editingPost ? 500 : 400 }}>
             写新文章
           </button>
           <button onClick={onLogout}
-            style={{ padding: '4px 14px', background: 'transparent', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: '0.85rem' }}>
+            style={{ padding: typeof window !== 'undefined' && window.innerWidth < 640 ? '3px 10px' : '4px 14px', background: 'transparent', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: typeof window !== 'undefined' && window.innerWidth < 640 ? '0.78rem' : '0.85rem' }}>
             退出
           </button>
         </div>
       </header>
 
-      <div style={{ padding: '2rem 2.5rem' }}>
+      <div style={{ padding: '1.5rem 2rem', maxWidth: '100%' }}>
         {showEditor ? (
           <PostEditor token={token} apiBase={apiBase} post={editingPost} onSave={handleSaveDone} onCancel={handleCancelEdit} />
         ) : (
@@ -290,7 +299,8 @@ function AllPostsManager({ token, apiBase, onEdit }: { token: string; apiBase: s
       )}
 
       {/* 图2 风格表格 */}
-      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 500 }}>
         <thead>
           <tr>
             <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 400, fontSize: '0.85rem', color: '#9ca3af', borderBottom: '1px solid #e5e7eb' }}>标题</th>
@@ -323,6 +333,7 @@ function AllPostsManager({ token, apiBase, onEdit }: { token: string; apiBase: s
           ))}
         </tbody>
       </table>
+      </div>
 
       {posts.length === 0 && !errorMsg && <div style={{ textAlign: 'center', padding: '4rem', color: '#9ca3af' }}>暂无文章</div>}
     </div>
@@ -369,12 +380,12 @@ function PostEditor({ token, apiBase, post, onSave, onCancel }: { token: string;
   };
 
   return (
-    <div style={{ maxWidth: 800 }}>
+    <div style={{ maxWidth: '100%', margin: '0 auto' }}>
       <h2 style={{ margin: '0 0 1.5rem', color: '#111827', fontSize: '1.15rem', fontWeight: 600 }}>{post ? '编辑文章' : '写新文章'}</h2>
       {error && (<div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', padding: '12px 16px', borderRadius: 6, marginBottom: '1.5rem', fontSize: '0.875rem', lineHeight: 1.6 }}>{error}</div>)}
 
       <form onSubmit={handleSubmit}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.25rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: typeof window !== 'undefined' && window.innerWidth < 640 ? '1fr' : '1fr 1fr', gap: '1.5rem', marginBottom: '1.25rem' }}>
           <div>
             <label style={{ display: 'block', fontWeight: 500, fontSize: '0.85rem', color: '#374151', marginBottom: '0.4rem' }}>标题</label>
             <input type="text" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} placeholder="请输入标题" required disabled={saving}
