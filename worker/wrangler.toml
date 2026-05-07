@@ -4,7 +4,7 @@ compatibility_date = "2024-01-01"
 
 [vars]
 ENVIRONMENT = "production"
-CORS_ORIGIN = "https://blog-7m3.pages.dev"
+CORS_ORIGIN = "https://bullydoss.com"
 
 [[d1_databases]]
 binding = "DB"
@@ -17,3 +17,7 @@ bucket_name = "blog-images"
 
 [triggers]
 crons = [ "0 0 * * *" ]
+
+[[routes]]
+pattern = "api.bullydoss.com"
+custom_domain = true
