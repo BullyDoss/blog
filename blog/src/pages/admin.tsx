@@ -17,7 +17,6 @@ const CATEGORIES = [
   { id: 'brainstorm', label: '思维风暴' },
   { id: 'chat', label: '夸夸其谈' },
   { id: 'daily', label: '打怪经验' },
-  { id: 'submit', label: '投稿审核' },
 ];
 
 function AdminDashboard() {
@@ -194,8 +193,6 @@ function LoginForm({ onSuccess, apiBase }: { onSuccess: (token: string) => void;
                 boxSizing: 'border-box',
                 outline: 'none',
               }}
-              onFocus={(e) => e.target.style.borderColor = '#111827'}
-              onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
             />
           </div>
 
@@ -225,8 +222,6 @@ function LoginForm({ onSuccess, apiBase }: { onSuccess: (token: string) => void;
                 boxSizing: 'border-box',
                 outline: 'none',
               }}
-              onFocus={(e) => e.target.style.borderColor = '#111827'}
-              onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
             />
           </div>
 
@@ -255,7 +250,6 @@ function LoginForm({ onSuccess, apiBase }: { onSuccess: (token: string) => void;
 }
 
 function AdminPanel({ token, onLogout, apiBase }: { token: string; onLogout: () => void; apiBase: string }) {
-  const [activeTab, setActiveTab] = React.useState<string>('notes');
   const [showEditor, setShowEditor] = React.useState(false);
 
   return (
@@ -267,16 +261,30 @@ function AdminPanel({ token, onLogout, apiBase }: { token: string; onLogout: () 
       <header style={{
         background: '#111827',
         color: 'white',
-        padding: '1rem 2rem',
+        padding: '0.875rem 2rem',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
       }}>
-        <h1 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600 }}>管理后台</h1>
+        <h1 style={{ margin: 0, fontSize: '1.125rem', fontWeight: 600 }}>管理后台</h1>
         
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
           <button
-            onClick={() => setShowEditor(!showEditor)}
+            onClick={() => setShowEditor(false)}
+            style={{
+              padding: '0.5rem 1rem',
+              background: 'transparent',
+              color: '#fff',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '0.875rem',
+              opacity: showEditor ? 0.7 : 1,
+            }}
+          >
+            文章管理
+          </button>
+          <button
+            onClick={() => setShowEditor(true)}
             style={{
               padding: '0.5rem 1rem',
               background: '#fff',
@@ -296,8 +304,7 @@ function AdminPanel({ token, onLogout, apiBase }: { token: string; onLogout: () 
               padding: '0.5rem 1rem',
               background: 'transparent',
               color: '#fff',
-              border: '1px solid #4b5563',
-              borderRadius: 4,
+              border: 'none',
               cursor: 'pointer',
               fontSize: '0.875rem',
             }}
@@ -311,84 +318,39 @@ function AdminPanel({ token, onLogout, apiBase }: { token: string; onLogout: () 
       <div style={{ padding: '2rem', maxWidth: 1200, margin: '0 auto' }}>
         {showEditor ? (
           <PostEditor 
-            category={activeTab} 
             token={token} 
             apiBase={apiBase}
             onSave={() => setShowEditor(false)}
             onCancel={() => setShowEditor(false)}
           />
-        ) : activeTab === 'submit' ? (
-          <SubmissionsManager token={token} apiBase={apiBase} />
         ) : (
-          <CategoryManager category={activeTab} token={token} apiBase={apiBase} />
+          <>
+            <AllPostsManager token={token} apiBase={apiBase} />
+            <SubmissionsManager token={token} apiBase={apiBase} />
+          </>
         )}
       </div>
-
-      {/* Category Tabs */}
-      <nav style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        background: '#fff',
-        borderTop: '1px solid #e5e7eb',
-        display: 'flex',
-        justifyContent: 'center',
-        gap: '0',
-        padding: '0',
-        zIndex: 100,
-      }}>
-        {CATEGORIES.map((cat) => (
-          <button
-            key={cat.id}
-            onClick={() => setActiveTab(cat.id)}
-            style={{
-              flex: 1,
-              padding: '0.875rem 1rem',
-              background: activeTab === cat.id ? '#111827' : 'transparent',
-              color: activeTab === cat.id ? '#fff' : '#6b7280',
-              border: 'none',
-              borderBottom: activeTab === cat.id ? '2px solid #111827' : '2px solid transparent',
-              cursor: 'pointer',
-              fontSize: '0.875rem',
-              fontWeight: activeTab === cat.id ? 600 : 400,
-              transition: 'all 0.2s',
-            }}
-          >
-            {cat.label}
-          </button>
-        ))}
-      </nav>
     </div>
   );
 }
 
-function CategoryManager({ category, token, apiBase }: { category: string; token: string; apiBase: string }) {
+function AllPostsManager({ token, apiBase }: { token: string; apiBase: string }) {
   const [posts, setPosts] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
-  const [editingPost, setEditingPost] = React.useState<any>(null);
-  const [showEditModal, setShowEditModal] = React.useState(false);
-  const [error, setError] = React.useState('');
 
   const fetchPosts = async () => {
     setLoading(true);
-    setError('');
     try {
-      const response = await fetch(`${apiBase}/api/admin/posts?category=${category}`, {
+      const response = await fetch(`${apiBase}/api/admin/posts`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       if (response.ok) {
         const data = await response.json();
-        setPosts(data);
-      } else if (response.status === 401 || response.status === 403) {
-        setError('登录已过期，请重新登录');
-        setTimeout(() => window.location.reload(), 2000);
-      } else {
-        setError(`获取文章失败 (${response.status})`);
+        setPosts(data.filter((p: any) => p.category !== 'submit'));
       }
     } catch (err) {
-      setError('网络错误，无法连接到 API');
+      console.error('获取文章失败:', err);
     } finally {
       setLoading(false);
     }
@@ -396,10 +358,10 @@ function CategoryManager({ category, token, apiBase }: { category: string; token
 
   React.useEffect(() => {
     fetchPosts();
-  }, [category]);
+  }, [token]);
 
   const deletePost = async (postId: number) => {
-    if (!confirm('确定要删除这篇文章吗？此操作不可恢复！')) return;
+    if (!confirm('确定要删除这篇文章吗？')) return;
 
     try {
       const response = await fetch(`${apiBase}/api/admin/posts/${postId}`, {
@@ -409,67 +371,18 @@ function CategoryManager({ category, token, apiBase }: { category: string; token
 
       if (response.ok) {
         setPosts(posts.filter(p => p.id !== postId));
-        alert('删除成功');
-      } else {
-        alert('删除失败');
       }
     } catch (err) {
-      alert('网络错误');
+      alert('操作失败');
     }
-  };
-
-  const handleEdit = (post: any) => {
-    setEditingPost(post);
-    setShowEditModal(true);
   };
 
   if (loading) {
     return <div style={{ textAlign: 'center', padding: '4rem', color: '#9ca3af' }}>加载中...</div>;
   }
 
-  if (error) {
-    return (
-      <div style={{
-        textAlign: 'center',
-        padding: '2rem',
-        background: '#fef2f2',
-        borderRadius: 8,
-        color: '#dc2626',
-        marginBottom: '2rem'
-      }}>
-        {error}
-        <br />
-        <button onClick={fetchPosts} style={{
-          marginTop: '1rem',
-          padding: '8px 20px',
-          background: '#dc2626',
-          color: 'white',
-          border: 'none',
-          borderRadius: 6,
-          cursor: 'pointer',
-        }}>
-          重试
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <div>
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '1.5rem',
-        paddingBottom: '1rem',
-        borderBottom: '1px solid #e5e7eb',
-      }}>
-        <h2 style={{ margin: 0, fontSize: '1.25rem', color: '#111827' }}>
-          文章管理 ({CATEGORIES.find(c => c.id === category)?.label})
-        </h2>
-        <span style={{ color: '#6b7280', fontSize: '0.9rem' }}>共 {posts.length} 篇</span>
-      </div>
-
+    <div style={{ marginBottom: '3rem' }}>
       <div style={{
         background: 'white',
         borderRadius: 8,
@@ -479,43 +392,37 @@ function CategoryManager({ category, token, apiBase }: { category: string; token
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: '#f9fafb', borderBottom: '2px solid #e5e7eb' }}>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: '0.85rem', color: '#374151' }}>ID</th>
               <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: '0.85rem', color: '#374151' }}>标题</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: '0.85rem', color: '#374151' }}>Slug</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: '0.85rem', color: '#374151' }}>状态</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: '0.85rem', color: '#374151' }}>日期</th>
+              <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: '0.85rem', color: '#374151' }}>频道</th>
+              <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: '0.85rem', color: '#374151' }}>时间</th>
               <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, fontSize: '0.85rem', color: '#374151' }}>操作</th>
             </tr>
           </thead>
           <tbody>
             {posts.map((post) => (
               <tr key={post.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                <td style={{ padding: '12px 16px', color: '#6b7280', fontSize: '0.9rem' }}>{post.id}</td>
-                <td style={{ padding: '12px 16px', fontWeight: 500, color: '#111827', fontSize: '0.9rem' }}>{post.title}</td>
-                <td style={{ padding: '12px 16px', color: '#6b7280', fontFamily: 'monospace', fontSize: '0.85rem' }}>{post.slug}</td>
-                <td style={{ padding: '12px 16px' }}>
+                <td style={{ padding: '14px 16px', fontWeight: 500, color: '#111827', fontSize: '0.9rem' }}>{post.title}</td>
+                <td style={{ padding: '14px 16px' }}>
                   <span style={{
                     display: 'inline-block',
-                    padding: '2px 8px',
+                    padding: '2px 10px',
+                    background: '#f3f4f6',
+                    color: '#6b7280',
                     borderRadius: 4,
                     fontSize: '0.8rem',
-                    fontWeight: 500,
-                    background: post.status === 'published' ? '#f3f4f6' : '#fef3c7',
-                    color: post.status === 'published' ? '#374151' : '#92400e',
                   }}>
-                    {post.status === 'published' ? '已发布' : '待审核'}
+                    {CATEGORIES.find(c => c.id === post.category)?.label || post.category}
                   </span>
                 </td>
-                <td style={{ padding: '12px 16px', color: '#6b7280', fontSize: '0.875rem' }}>{new Date(post.created_at).toLocaleDateString('zh-CN')}</td>
-                <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                  <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                <td style={{ padding: '14px 16px', color: '#6b7280', fontSize: '0.875rem' }}>{new Date(post.created_at).toLocaleDateString('zh-CN')}</td>
+                <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                  <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', alignItems: 'center' }}>
                     <button
-                      onClick={() => handleEdit(post)}
                       style={{
-                        padding: '4px 12px',
-                        background: '#f3f4f6',
-                        color: '#374151',
-                        border: '1px solid #d1d5db',
+                        padding: '5px 14px',
+                        background: '#111827',
+                        color: 'white',
+                        border: 'none',
                         borderRadius: 4,
                         cursor: 'pointer',
                         fontSize: '0.85rem',
@@ -527,14 +434,12 @@ function CategoryManager({ category, token, apiBase }: { category: string; token
                     <button
                       onClick={() => deletePost(post.id)}
                       style={{
-                        padding: '4px 12px',
-                        background: '#fef2f2',
-                        color: '#dc2626',
-                        border: '1px solid #fecaca',
-                        borderRadius: 4,
+                        padding: '5px 14px',
+                        background: 'transparent',
+                        color: '#6b7280',
+                        border: 'none',
                         cursor: 'pointer',
                         fontSize: '0.85rem',
-                        fontWeight: 500,
                       }}
                     >
                       删除
@@ -552,40 +457,22 @@ function CategoryManager({ category, token, apiBase }: { category: string; token
           </div>
         )}
       </div>
-
-      {/* Edit Modal */}
-      {showEditModal && editingPost && (
-        <PostEditorModal
-          post={editingPost}
-          category={category}
-          token={token}
-          apiBase={apiBase}
-          onSave={() => {
-            setShowEditModal(false);
-            fetchPosts();
-          }}
-          onCancel={() => setShowEditModal(false)}
-        />
-      )}
     </div>
   );
 }
 
-function PostEditor({ post, category, token, apiBase, onSave, onCancel }: {
-  post: any;
-  category: string;
+function PostEditor({ token, apiBase, onSave, onCancel }: {
   token: string;
   apiBase: string;
   onSave: () => void;
   onCancel: () => void;
 }) {
-  const isEdit = !!post;
   const [formData, setFormData] = React.useState({
-    title: post?.title || '',
-    slug: post?.slug || '',
-    content: post?.content || '',
-    excerpt: post?.excerpt || '',
-    category: post?.category || category,
+    title: '',
+    slug: '',
+    content: '',
+    excerpt: '',
+    category: 'notes',
   });
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState('');
@@ -602,30 +489,17 @@ function PostEditor({ post, category, token, apiBase, onSave, onCancel }: {
     setError('');
 
     try {
-      let response: Response;
-      
-      if (isEdit) {
-        response = await fetch(`${apiBase}/api/admin/posts/${post.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(formData),
-        });
-      } else {
-        response = await fetch(`${apiBase}/api/admin/posts`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(formData),
-        });
-      }
+      const response = await fetch(`${apiBase}/api/admin/posts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(formData),
+      });
 
       if (response.ok) {
-        alert(isEdit ? '更新成功' : '创建成功');
+        alert('创建成功');
         onSave();
       } else {
         const errorData = await response.json();
@@ -656,10 +530,9 @@ function PostEditor({ post, category, token, apiBase, onSave, onCancel }: {
       padding: '2rem',
       boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
       border: '1px solid #e5e7eb',
-      marginBottom: '4rem',
     }}>
       <h2 style={{ margin: '0 0 1.5rem', color: '#111827', fontSize: '1.25rem', fontWeight: 600 }}>
-        {isEdit ? '编辑文章' : '写新文章'}
+        写新文章
       </h2>
 
       {error && (
@@ -716,40 +589,22 @@ function PostEditor({ post, category, token, apiBase, onSave, onCancel }: {
             }}>
               URL 别名 (Slug)
             </label>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <input
-                type="text"
-                value={formData.slug}
-                onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                placeholder="my-post"
-                style={{
-                  flex: 1,
-                  padding: '8px 12px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: 4,
-                  fontSize: '0.95rem',
-                  fontFamily: 'monospace',
-                  boxSizing: 'border-box',
-                  outline: 'none',
-                }}
-              />
-              <button
-                type="button"
-                onClick={generateSlugFromTitle}
-                style={{
-                  padding: '8px 16px',
-                  background: '#f3f4f6',
-                  border: '1px solid #d1d5db',
-                  borderRadius: 4,
-                  cursor: 'pointer',
-                  fontSize: '0.875rem',
-                  fontWeight: 500,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                自动生成
-              </button>
-            </div>
+            <input
+              type="text"
+              value={formData.slug}
+              onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+              placeholder="my-post"
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                border: '1px solid #d1d5db',
+                borderRadius: 4,
+                fontSize: '0.95rem',
+                fontFamily: 'monospace',
+                boxSizing: 'border-box',
+                outline: 'none',
+              }}
+            />
           </div>
         </div>
 
@@ -776,7 +631,7 @@ function PostEditor({ post, category, token, apiBase, onSave, onCancel }: {
               background: 'white',
             }}
           >
-            {CATEGORIES.filter(c => c.id !== 'submit').map((cat) => (
+            {CATEGORIES.map((cat) => (
               <option key={cat.id} value={cat.id}>{cat.label}</option>
             ))}
           </select>
@@ -796,7 +651,7 @@ function PostEditor({ post, category, token, apiBase, onSave, onCancel }: {
             type="text"
             value={formData.excerpt}
             onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })}
-            placeholder="文章摘要（可选）"
+            placeholder="简短描述..."
             style={{
               width: '100%',
               padding: '8px 12px',
@@ -810,19 +665,38 @@ function PostEditor({ post, category, token, apiBase, onSave, onCancel }: {
         </div>
 
         <div style={{ marginBottom: '1.5rem' }}>
-          <label style={{
-            display: 'block',
-            fontWeight: 500,
-            fontSize: '0.875rem',
-            color: '#374151',
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
             marginBottom: '0.5rem',
           }}>
-            正文 (Markdown)
-          </label>
+            <label style={{
+              fontWeight: 500,
+              fontSize: '0.875rem',
+              color: '#374151',
+            }}>
+              正文 (Markdown)
+            </label>
+            <button
+              type="button"
+              style={{
+                padding: '4px 12px',
+                background: '#f3f4f6',
+                border: '1px solid #d1d5db',
+                borderRadius: 4,
+                cursor: 'pointer',
+                fontSize: '0.8rem',
+                color: '#374151',
+              }}
+            >
+              插入图片
+            </button>
+          </div>
           <textarea
             value={formData.content}
             onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-            placeholder="在此输入正文，支持 Markdown..."
+            placeholder="在此输入正文，支持 Markdown。使用工具栏插入图片..."
             required
             rows={12}
             style={{
@@ -838,17 +712,31 @@ function PostEditor({ post, category, token, apiBase, onSave, onCancel }: {
               outline: 'none',
             }}
           />
-          <p style={{ margin: '0.5rem 0 0', fontSize: '0.8rem', color: '#6b7280' }}>
-            在此输入正文，支持 Markdown。使用工具栏插入图片...
-          </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'space-between' }}>
+          <button
+            type="submit"
+            disabled={saving}
+            style={{
+              flex: 1,
+              padding: '12px',
+              background: saving ? '#9ca3af' : '#111827',
+              color: 'white',
+              border: 'none',
+              borderRadius: 4,
+              cursor: saving ? 'not-allowed' : 'pointer',
+              fontWeight: 500,
+              fontSize: '0.95rem',
+            }}
+          >
+            {saving ? '保存中...' : '发布'}
+          </button>
           <button
             type="button"
             onClick={onCancel}
             style={{
-              padding: '8px 24px',
+              padding: '12px 32px',
               background: '#fff',
               color: '#374151',
               border: '1px solid #d1d5db',
@@ -860,61 +748,8 @@ function PostEditor({ post, category, token, apiBase, onSave, onCancel }: {
           >
             取消
           </button>
-          <button
-            type="submit"
-            disabled={saving}
-            style={{
-              padding: '8px 32px',
-              background: saving ? '#9ca3af' : '#111827',
-              color: 'white',
-              border: 'none',
-              borderRadius: 4,
-              cursor: saving ? 'not-allowed' : 'pointer',
-              fontWeight: 500,
-              fontSize: '0.95rem',
-            }}
-          >
-            {saving ? '保存中...' : '保存'}
-          </button>
         </div>
       </form>
-    </div>
-  );
-}
-
-function PostEditorModal({ post, category, token, apiBase, onSave, onCancel }: {
-  post: any;
-  category: string;
-  token: string;
-  apiBase: string;
-  onSave: () => void;
-  onCancel: () => void;
-}) {
-  return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      background: 'rgba(0,0,0,0.5)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000,
-      padding: '1rem',
-    }}>
-      <div style={{
-        background: 'white',
-        borderRadius: 8,
-        maxWidth: 800,
-        width: '100%',
-        maxHeight: '90vh',
-        overflowY: 'auto',
-        padding: '2rem',
-      }}>
-        <PostEditor post={post} category={category} token={token} apiBase={apiBase} onSave={onSave} onCancel={onCancel} />
-      </div>
     </div>
   );
 }
@@ -946,7 +781,7 @@ function SubmissionsManager({ token, apiBase }: { token: string; apiBase: string
   }, [token]);
 
   const approvePost = async (postId: number) => {
-    if (!confirm('确定要批准这篇投稿并发布吗？')) return;
+    if (!confirm('确定要批准这篇投稿吗？')) return;
 
     try {
       const response = await fetch(`${apiBase}/api/admin/posts/${postId}/approve`, {
@@ -956,7 +791,6 @@ function SubmissionsManager({ token, apiBase }: { token: string; apiBase: string
 
       if (response.ok) {
         setSubmissions(submissions.filter(s => s.id !== postId));
-        alert('已批准发布');
       }
     } catch (err) {
       alert('操作失败');
@@ -964,44 +798,31 @@ function SubmissionsManager({ token, apiBase }: { token: string; apiBase: string
   };
 
   const rejectPost = async (postId: number) => {
-    const reason = prompt('请输入拒绝原因（可选）：');
-    
+    if (!confirm('确定要拒绝这篇投稿吗？')) return;
+
     try {
       const response = await fetch(`${apiBase}/api/admin/posts/${postId}/reject`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ reason }),
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (response.ok) {
         setSubmissions(submissions.filter(s => s.id !== postId));
-        alert('已拒绝该投稿');
       }
     } catch (err) {
       alert('操作失败');
     }
   };
 
-  if (loading) {
-    return <div style={{ textAlign: 'center', padding: '4rem', color: '#9ca3af' }}>加载中...</div>;
+  if (loading || submissions.length === 0) {
+    return null;
   }
 
   return (
     <div>
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '1.5rem',
-        paddingBottom: '1rem',
-        borderBottom: '1px solid #e5e7eb',
-      }}>
-        <h2 style={{ margin: 0, fontSize: '1.25rem', color: '#111827' }}>投稿审核</h2>
-        <span style={{ color: '#6b7280', fontSize: '0.9rem' }}>共 {submissions.length} 条待审核</span>
-      </div>
+      <h2 style={{ margin: '0 0 1.5rem', color: '#111827', fontSize: '1.125rem', fontWeight: 600 }}>
+        待审核投稿 ({submissions.length})
+      </h2>
 
       <div style={{ display: 'grid', gap: '1rem' }}>
         {submissions.map((sub) => (
@@ -1009,53 +830,45 @@ function SubmissionsManager({ token, apiBase }: { token: string; apiBase: string
             background: 'white',
             border: '1px solid #e5e7eb',
             borderRadius: 8,
-            padding: '1.5rem',
+            padding: '1.25rem',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
           }}>
-            <h3 style={{ margin: '0 0 0.75rem', color: '#111827', fontSize: '1.1rem', fontWeight: 600 }}>
-              {sub.title}
-            </h3>
-            <p style={{ color: '#6b7280', fontSize: '0.9rem', margin: '0 0 1rem' }}>
-              作者: {sub.author || '匿名'} | 提交时间: {new Date(sub.created_at).toLocaleDateString('zh-CN')}
-            </p>
-            <p style={{
-              color: '#4b5563',
-              lineHeight: 1.6,
-              margin: '0 0 1.25rem',
-              padding: '1rem',
-              background: '#f9fafb',
-              borderRadius: 4,
-              fontSize: '0.9rem',
-              maxHeight: 150,
-              overflow: 'auto',
-            }}>
-              {sub.excerpt}
-            </p>
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <div style={{ flex: 1 }}>
+              <h3 style={{ margin: '0 0 0.375rem', color: '#111827', fontSize: '1rem', fontWeight: 600 }}>
+                {sub.title}
+              </h3>
+              <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: 0 }}>
+                作者: {sub.author || '匿名'} | {new Date(sub.created_at).toLocaleDateString('zh-CN')}
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem', marginLeft: '2rem' }}>
               <button
                 onClick={() => approvePost(sub.id)}
                 style={{
-                  padding: '8px 20px',
+                  padding: '6px 16px',
                   background: '#111827',
                   color: 'white',
                   border: 'none',
                   borderRadius: 4,
                   cursor: 'pointer',
-                  fontSize: '0.875rem',
+                  fontSize: '0.85rem',
                   fontWeight: 500,
                 }}
               >
-                批准发布
+                批准
               </button>
               <button
                 onClick={() => rejectPost(sub.id)}
                 style={{
-                  padding: '8px 20px',
+                  padding: '6px 16px',
                   background: '#fff',
                   color: '#dc2626',
                   border: '1px solid #fecaca',
                   borderRadius: 4,
                   cursor: 'pointer',
-                  fontSize: '0.875rem',
+                  fontSize: '0.85rem',
                   fontWeight: 500,
                 }}
               >
@@ -1065,17 +878,6 @@ function SubmissionsManager({ token, apiBase }: { token: string; apiBase: string
           </div>
         ))}
       </div>
-
-      {submissions.length === 0 && (
-        <div style={{
-          textAlign: 'center',
-          padding: '3rem',
-          color: '#9ca3af',
-          fontSize: '1rem',
-        }}>
-          暂无待审核投稿
-        </div>
-      )}
     </div>
   );
 }

@@ -10,17 +10,16 @@ export default function HomePage(): React.ReactElement {
 }
 
 const CATEGORIES = [
-  { id: 'notes', label: '学习笔记' },
-  { id: 'brainstorm', label: '思维风暴' },
-  { id: 'chat', label: '夸夸其谈' },
-  { id: 'daily', label: '打怪经验' },
-  { id: 'submit', label: '投稿专区' },
+  { id: 'notes', label: '学习笔记', desc: '记录知识，沉淀思考' },
+  { id: 'brainstorm', label: '思维风暴', desc: '提问、分享想法、碰撞灵感' },
+  { id: 'chat', label: '夸夸其谈', desc: '分享生活，记录瞬间' },
+  { id: 'daily', label: '打怪经验', desc: '' },
+  { id: 'submit', label: '投稿专区', desc: '' },
 ];
 
 function BlogLayout() {
   const [activeCategory, setActiveCategory] = useState('notes');
   const [posts, setPosts] = useState<any[]>([]);
-  const [selectedPost, setSelectedPost] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
@@ -42,9 +41,6 @@ function BlogLayout() {
       if (response.ok) {
         const data = await response.json();
         setPosts(data);
-        if (data.length > 0 && !selectedPost) {
-          setSelectedPost(data[0]);
-        }
       }
     } catch (err) {
       console.error('Failed to fetch posts:', err);
@@ -53,106 +49,136 @@ function BlogLayout() {
     }
   };
 
+  const currentCategory = CATEGORIES.find(c => c.id === activeCategory);
+
   return (
     <div style={{
       display: 'flex',
       minHeight: 'calc(100vh - 60px)',
       marginTop: '20px',
+      background: '#fff',
     }}>
-      {/* Sidebar */}
+      {/* Left Sidebar */}
       <aside style={{
-        width: sidebarOpen ? '280px' : '0',
+        width: sidebarOpen ? '260px' : '0',
         borderRight: '1px solid #e5e7eb',
         overflow: 'hidden',
         transition: 'width 0.3s ease',
         flexShrink: 0,
+        display: 'flex',
+        flexDirection: 'column',
       }}>
-        <div style={{ padding: '1.5rem 1rem', borderBottom: '1px solid #e5e7eb' }}>
-          <h2 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600, color: '#374151' }}>
+        {/* Sidebar Header */}
+        <div style={{ 
+          padding: '1.25rem 1rem', 
+          borderBottom: '1px solid #e5e7eb',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}>
+          <h2 style={{ 
+            margin: 0, 
+            fontSize: '0.95rem', 
+            fontWeight: 600, 
+            color: '#111827',
+            flex: 1,
+          }}>
             BullyDoss的不务正业笔记
           </h2>
+          <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>v</span>
         </div>
 
-        {/* Category Tabs */}
-        <nav style={{ 
-          display: 'flex', 
-          flexDirection: 'column',
-          gap: '0.25rem',
-          padding: '0.75rem 1rem',
-          borderBottom: '1px solid #e5e7eb'
-        }}>
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => {
-                setActiveCategory(cat.id);
-                setSelectedPost(null);
-              }}
-              style={{
-                padding: '0.625rem 0.875rem',
-                background: activeCategory === cat.id ? '#f3f4f6' : 'transparent',
-                color: activeCategory === cat.id ? '#111827' : '#6b7280',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontSize: '0.9rem',
-                fontWeight: activeCategory === cat.id ? 600 : 400,
-                textAlign: 'left',
-                transition: 'all 0.15s ease',
-                width: '100%',
-              }}
-            >
-              {cat.label}
-            </button>
-          ))}
-        </nav>
+        {/* Search Box */}
+        <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #e5e7eb' }}>
+          <input
+            type="text"
+            placeholder="搜索..."
+            style={{
+              width: '100%',
+              padding: '6px 10px',
+              border: '1px solid #e5e7eb',
+              borderRadius: 4,
+              fontSize: '0.875rem',
+              outline: 'none',
+              boxSizing: 'border-box',
+            }}
+          />
+        </div>
 
-        {/* Post List */}
+        {/* Articles Navigation */}
         <div style={{ 
-          overflowY: 'auto', 
-          height: 'calc(100vh - 300px)',
-          padding: '0.75rem 1rem'
+          flex: 1,
+          overflowY: 'auto',
+          padding: '0.75rem 0',
         }}>
+          <div style={{ 
+            padding: '0 1rem', 
+            marginBottom: '0.5rem',
+            fontSize: '0.8rem',
+            fontWeight: 600,
+            color: '#6b7280',
+          }}>
+            文章导航
+          </div>
+          
           {loading ? (
-            <div style={{ textAlign: 'center', padding: '2rem', color: '#9ca3af', fontSize: '0.9rem' }}>
+            <div style={{ textAlign: 'center', padding: '2rem', color: '#9ca3af', fontSize: '0.85rem' }}>
               加载中...
             </div>
           ) : posts.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '2rem 1rem', color: '#9ca3af', fontSize: '0.875rem' }}>
+            <div style={{ textAlign: 'center', padding: '2rem 1rem', color: '#9ca3af', fontSize: '0.8rem' }}>
               暂无文章
             </div>
           ) : (
             posts.map((post) => (
               <article
                 key={post.id}
-                onClick={() => setSelectedPost(post)}
                 style={{
-                  padding: '0.875rem 0',
+                  padding: '0.625rem 1rem',
                   cursor: 'pointer',
-                  borderBottom: '1px solid #f3f4f6',
                   transition: 'background 0.15s ease',
+                  borderBottom: '1px solid #f9fafb',
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.background = '#f9fafb'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
               >
-                <h3 style={{
-                  margin: '0 0 0.375rem',
-                  fontSize: '0.9rem',
-                  fontWeight: selectedPost?.id === post.id ? 600 : 500,
-                  color: selectedPost?.id === post.id ? '#111827' : '#374151',
-                  lineHeight: 1.4,
-                }}>
-                  {post.title}
-                </h3>
                 <div style={{
                   display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  fontSize: '0.8rem',
-                  color: '#9ca3af',
+                  alignItems: 'flex-start',
+                  gap: '0.5rem',
+                  marginBottom: '0.25rem',
                 }}>
-                  <span>{CATEGORIES.find(c => c.id === post.category)?.label || post.category}</span>
-                  <span>{new Date(post.created_at).toLocaleDateString('zh-CN')}</span>
+                  <span style={{
+                    display: 'inline-block',
+                    padding: '1px 6px',
+                    background: '#f3f4f6',
+                    color: '#6b7280',
+                    borderRadius: 3,
+                    fontSize: '0.7rem',
+                    fontWeight: 500,
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                    marginTop: '2px',
+                  }}>
+                    {CATEGORIES.find(c => c.id === post.category)?.label || post.category}
+                  </span>
+                  <span style={{
+                    fontSize: '0.85rem',
+                    color: '#374151',
+                    fontWeight: 500,
+                    lineHeight: 1.4,
+                    flex: 1,
+                  }}>
+                    {post.title}
+                  </span>
+                </div>
+                <div style={{
+                  textAlign: 'right',
+                  fontSize: '0.75rem',
+                  color: '#9ca3af',
+                  paddingLeft: '4rem',
+                }}>
+                  {new Date(post.created_at).toLocaleDateString('zh-CN')}
                 </div>
               </article>
             ))
@@ -163,115 +189,190 @@ function BlogLayout() {
       {/* Main Content */}
       <main style={{
         flex: 1,
-        overflowY: 'auto',
-        background: '#ffffff',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
       }}>
-        {/* Toggle Sidebar Button */}
-        <button
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          style={{
-            position: 'fixed',
-            left: sidebarOpen ? '290px' : '1rem',
-            top: '80px',
-            zIndex: 10,
-            padding: '0.5rem',
-            background: '#fff',
-            border: '1px solid #d1d5db',
-            borderRadius: '6px',
-            cursor: 'pointer',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-            transition: 'left 0.3s ease',
-          }}
-        >
-          {sidebarOpen ? '<' : '>'}
-        </button>
+        {/* Top Search Bar */}
+        <div style={{
+          padding: '1rem 2rem',
+          borderBottom: '1px solid #e5e7eb',
+        }}>
+          <input
+            type="text"
+            placeholder="搜索..."
+            style={{
+              width: '240px',
+              padding: '6px 12px',
+              border: '1px solid #e5e7eb',
+              borderRadius: 4,
+              fontSize: '0.875rem',
+              outline: 'none',
+            }}
+          />
+        </div>
 
-        {loading ? (
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center', 
-            height: '100%' ,
-            color: '#9ca3af'
-          }}>
-            加载中...
-          </div>
-        ) : !selectedPost ? (
-          <div style={{ 
-            display: 'flex', 
-            flexDirection: 'column',
-            alignItems: 'center', 
-            justifyContent: 'center', 
-            height: '100%',
-            color: '#9ca3af',
-            padding: '2rem',
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1rem', opacity: 0.3 }}>[]</div>
-            <p style={{ margin: 0, fontSize: '1.125rem' }}>请选择一篇文章</p>
-          </div>
-        ) : (
-          <article style={{ maxWidth: '800px', margin: '0 auto', padding: '3rem 2rem' }}>
-            <header style={{ marginBottom: '2.5rem', paddingBottom: '2rem', borderBottom: '1px solid #e5e7eb' }}>
-              <div style={{
-                display: 'inline-block',
-                padding: '0.25rem 0.75rem',
-                background: '#f3f4f6',
-                color: '#374151',
-                borderRadius: '4px',
-                fontSize: '0.85rem',
-                fontWeight: 500,
-                marginBottom: '1rem',
-              }}>
-                {CATEGORIES.find(c => c.id === selectedPost.category)?.label}
-              </div>
-              
-              <h1 style={{
-                margin: '0 0 1rem',
-                fontSize: '2.25rem',
-                fontWeight: 700,
-                color: '#111827',
-                lineHeight: 1.3,
-              }}>
-                {selectedPost.title}
-              </h1>
-              
-              <div style={{
-                display: 'flex',
-                gap: '1.5rem',
-                fontSize: '0.9rem',
-                color: '#6b7280',
-              }}>
-                <span>作者: {selectedPost.author || 'BullyDoss'}</span>
-                <span>{new Date(selectedPost.created_at).toLocaleDateString('zh-CN')}</span>
-              </div>
-            </header>
+        {/* Category Tabs */}
+        <nav style={{
+          display: 'flex',
+          gap: '2rem',
+          padding: '0 2rem',
+          borderBottom: '1px solid #e5e7eb',
+          background: '#fff',
+        }}>
+          {CATEGORIES.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => setActiveCategory(cat.id)}
+              style={{
+                padding: '0.875rem 0',
+                background: 'transparent',
+                color: activeCategory === cat.id ? '#111827' : '#6b7280',
+                border: 'none',
+                borderBottom: activeCategory === cat.id ? '2px solid #111827' : '2px solid transparent',
+                cursor: 'pointer',
+                fontSize: '0.95rem',
+                fontWeight: activeCategory === cat.id ? 600 : 400,
+                transition: 'all 0.2s',
+              }}
+            >
+              {cat.label}
+            </button>
+          ))}
+        </nav>
 
-            <div style={{
-              color: '#374151',
-              lineHeight: 1.8,
-              fontSize: '1.05rem',
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word',
+        {/* Content Area */}
+        <div style={{
+          flex: 1,
+          overflowY: 'auto',
+          padding: '3rem 4rem',
+        }}>
+          {loading ? (
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              height: '100%',
+              color: '#9ca3af'
             }}>
-              {selectedPost.content}
+              加载中...
             </div>
+          ) : (
+            <>
+              {/* Category Header */}
+              <header style={{ marginBottom: '3rem' }}>
+                <h1 style={{
+                  margin: '0 0 0.5rem',
+                  fontSize: '2rem',
+                  fontWeight: 700,
+                  color: '#111827',
+                }}>
+                  {currentCategory?.label}
+                </h1>
+                {currentCategory?.desc && (
+                  <p style={{
+                    margin: 0,
+                    fontSize: '1rem',
+                    color: '#6b7280',
+                  }}>
+                    {currentCategory.desc}
+                  </p>
+                )}
+              </header>
 
-            <footer style={{
-              marginTop: '3rem',
-              paddingTop: '2rem',
-              borderTop: '1px solid #e5e7eb',
+              {/* Posts List or Empty State */}
+              {posts.length === 0 ? (
+                <div style={{
+                  textAlign: 'center',
+                  padding: '4rem 2rem',
+                  color: '#9ca3af',
+                  fontSize: '1rem',
+                }}>
+                  还没有内容，快去后台发布吧
+                </div>
+              ) : (
+                <div style={{ maxWidth: '700px' }}>
+                  {posts.map((post) => (
+                    <article
+                      key={post.id}
+                      style={{
+                        marginBottom: '2.5rem',
+                        paddingBottom: '2rem',
+                        borderBottom: '1px solid #f3f4f6',
+                      }}
+                    >
+                      <h2 style={{
+                        margin: '0 0 0.5rem',
+                        fontSize: '1.35rem',
+                        fontWeight: 600,
+                        color: '#111827',
+                      }}>
+                        {post.title}
+                      </h2>
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        fontSize: '0.875rem',
+                        color: '#9ca3af',
+                      }}>
+                        <span>{post.excerpt}</span>
+                        <span>{new Date(post.created_at).toLocaleDateString('zh-CN')}</span>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Bottom Toggle */}
+        <div style={{
+          position: 'fixed',
+          bottom: '2rem',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          display: 'flex',
+          gap: '0.5rem',
+          zIndex: 100,
+        >
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '50%',
+              background: '#111827',
+              color: 'white',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '0.75rem',
               display: 'flex',
-              justifyContent: 'space-between',
               alignItems: 'center',
-              fontSize: '0.9rem',
-              color: '#9ca3af',
-            }}>
-              <span>ID: {selectedPost.id}</span>
-              <span>Slug: {selectedPost.slug}</span>
-            </footer>
-          </article>
-        )}
+              justifyContent: 'center',
+            }}
+          >
+            v
+          </button>
+          <button
+            style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '50%',
+              background: '#fff',
+              color: '#111827',
+              border: '1px solid #d1d5db',
+              cursor: 'pointer',
+              fontSize: '0.75rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            o
+          </button>
+        </div>
       </main>
     </div>
   );
