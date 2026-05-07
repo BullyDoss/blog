@@ -6,6 +6,13 @@ interface ImageUploaderProps {
   maxFileSize?: number;
 }
 
+function getApiBase() {
+  if (typeof window !== 'undefined' && window.__CONFIG__) {
+    return window.__CONFIG__.apiBaseUrl || 'https://blog-api.bullydoss-blog.workers.dev';
+  }
+  return 'https://blog-api.bullydoss-blog.workers.dev';
+}
+
 export default function ImageUploader({ onUploadSuccess, maxFileSize = 5 }: ImageUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -26,12 +33,12 @@ export default function ImageUploader({ onUploadSuccess, maxFileSize = 5 }: Imag
     }
 
     setUploading(true);
-    
+
     const formData = new FormData();
     formData.append('image', file);
 
     try {
-      const response = await fetch(`${window.customFields.apiBaseUrl}/api/images/upload`, {
+      const response = await fetch(`${getApiBase()}/api/images/upload`, {
         method: 'POST',
         body: formData,
       });
@@ -41,13 +48,9 @@ export default function ImageUploader({ onUploadSuccess, maxFileSize = 5 }: Imag
       if (response.ok && data.url) {
         setPreview(data.url);
         onUploadSuccess?.(data.url);
-        
-        if (navigator.clipboard) {
-          await navigator.clipboard.writeText(`![image](${data.url})`);
-          alert('✅ 图片已上传，Markdown 链接已复制到剪贴板！');
-        }
+        alert(`✅ 图片已上传！\n\nMarkdown: ![图片](${data.url})`);
       } else {
-        alert(`❌ 上传失败：${data.message}`);
+        alert(`❌ 上传失败：${data.message || data.error}`);
       }
     } catch (err) {
       alert('❌ 网络错误，请检查网络连接');

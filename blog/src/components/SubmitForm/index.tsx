@@ -16,7 +16,7 @@ export default function SubmitForm() {
     if (typeof window !== 'undefined' && window.__CONFIG__) {
       return window.__CONFIG__.apiBaseUrl || 'https://blog-api.bullydoss-blog.workers.dev';
     }
-    return 'https://blog-api.bullydoss-blog.workers.dev';
+    return 'https://api.bullydoss.com';
   };
 
   const handleSubmit = async (e) => {

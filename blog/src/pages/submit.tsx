@@ -20,7 +20,7 @@ function SubmitPageContent() {
     if (typeof window !== 'undefined' && window.__CONFIG__) {
       return window.__CONFIG__.apiBaseUrl || 'https://blog-api.bullydoss-blog.workers.dev';
     }
-    return 'https://blog-api.bullydoss-blog.workers.dev';
+    return 'https://api.bullydoss.com';
   };
 
   useEffect(() => {
@@ -274,9 +274,9 @@ function SubmitForm({ onSuccess }: { onSuccess: () => void }) {
 
   const getApiBase = () => {
     if (typeof window !== 'undefined' && window.__CONFIG__) {
-      return window.__CONFIG__.apiBaseUrl || 'https://blog-api.bullydoss-blog.workers.dev';
+      return window.__CONFIG__.apiBaseUrl || 'https://api.bullydoss.com';
     }
-    return 'https://blog-api.bullydoss-blog.workers.dev';
+    return 'https://api.bullydoss.com';
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
