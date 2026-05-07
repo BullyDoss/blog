@@ -21,6 +21,13 @@ function AdminDashboard() {
     return '';
   });
 
+  const getApiBase = () => {
+    if (typeof window !== 'undefined' && window.__CONFIG__) {
+      return window.__CONFIG__.apiBaseUrl || 'https://api.bullydoss.com';
+    }
+    return 'https://api.bullydoss.com';
+  };
+
   React.useEffect(() => {
     if (token) setView('dashboard');
   }, [token]);
@@ -38,13 +45,13 @@ function AdminDashboard() {
   };
 
   if (view === 'login' || !token) {
-    return <LoginForm onSuccess={handleLoginSuccess} />;
+    return <LoginForm onSuccess={handleLoginSuccess} apiBase={getApiBase()} />;
   }
 
-  return <AdminPanel token={token} onLogout={handleLogout} />;
+  return <AdminPanel token={token} onLogout={handleLogout} apiBase={getApiBase()} />;
 }
 
-function LoginForm({ onSuccess }: { onSuccess: (token: string) => void }) {
+function LoginForm({ onSuccess, apiBase }: { onSuccess: (token: string) => void; apiBase: string }) {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState('');
   const [username, setUsername] = React.useState('');
@@ -56,8 +63,6 @@ function LoginForm({ onSuccess }: { onSuccess: (token: string) => void }) {
     setError('');
 
     try {
-      const apiBase = '';
-
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000);
 
@@ -258,7 +263,7 @@ function LoginForm({ onSuccess }: { onSuccess: (token: string) => void }) {
   );
 }
 
-function AdminPanel({ token, onLogout }: { token: string; onLogout: () => void }) {
+function AdminPanel({ token, onLogout, apiBase }: { token: string; onLogout: () => void; apiBase: string }) {
   const [activeTab, setActiveTab] = React.useState<'posts' | 'submissions'>('posts');
 
   return (
@@ -326,16 +331,16 @@ function AdminPanel({ token, onLogout }: { token: string; onLogout: () => void }
       </nav>
 
       <main style={{ minHeight: 400 }}>
-        {activeTab === 'posts' 
-          ? <PostsManager token={token} /> 
-          : <SubmissionsManager token={token} />
+        {activeTab === 'posts'
+          ? <PostsManager token={token} apiBase={apiBase} />
+          : <SubmissionsManager token={token} apiBase={apiBase} />
         }
       </main>
     </div>
   );
 }
 
-function PostsManager({ token }: { token: string }) {
+function PostsManager({ token, apiBase }: { token: string; apiBase: string }) {
   const [posts, setPosts] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
@@ -344,7 +349,6 @@ function PostsManager({ token }: { token: string }) {
     setLoading(true);
     setError('');
     try {
-      const apiBase = '';
       const response = await fetch(`${apiBase}/api/admin/posts`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -373,7 +377,6 @@ function PostsManager({ token }: { token: string }) {
     if (!confirm('确定要删除这篇文章吗？此操作不可恢复！')) return;
 
     try {
-      const apiBase = '';
       const response = await fetch(`${apiBase}/api/admin/posts/${postId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
@@ -559,14 +562,13 @@ function PostsManager({ token }: { token: string }) {
   );
 }
 
-function SubmissionsManager({ token }: { token: string }) {
+function SubmissionsManager({ token, apiBase }: { token: string; apiBase: string }) {
   const [submissions, setSubmissions] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
 
   const fetchSubmissions = async () => {
     setLoading(true);
     try {
-      const apiBase = '';
       const response = await fetch(`${apiBase}/api/admin/posts?status=pending`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -588,7 +590,6 @@ function SubmissionsManager({ token }: { token: string }) {
 
   const approvePost = async (postId: number) => {
     try {
-      const apiBase = '';
       const response = await fetch(`${apiBase}/api/admin/posts/${postId}`, {
         method: 'PUT',
         headers: {
