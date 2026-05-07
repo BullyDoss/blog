@@ -18,7 +18,6 @@ const CATEGORIES = [
 ];
 
 function BlogLayout() {
-  const [activeCategory, setActiveCategory] = useState('notes');
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -32,12 +31,12 @@ function BlogLayout() {
 
   useEffect(() => {
     fetchPosts();
-  }, [activeCategory]);
+  }, []);
 
   const fetchPosts = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${getApiBase()}/api/posts?category=${activeCategory}`);
+      const response = await fetch(`${getApiBase()}/api/posts`);
       if (response.ok) {
         const data = await response.json();
         setPosts(data);
@@ -60,55 +59,33 @@ function BlogLayout() {
       background: '#f9fafb',
       padding: '2rem',
     }}>
-      {/* Category Tabs */}
-      <nav style={{
+      {/* Header with Search */}
+      <div style={{
         display: 'flex',
-        gap: '0.5rem',
-        marginBottom: '1.5rem',
-        borderBottom: '1px solid #e5e7eb',
-        paddingBottom: '0',
+        justifyContent: 'space-between',
         alignItems: 'center',
-        flexWrap: 'wrap',
+        marginBottom: '1.5rem',
       }}>
-        {CATEGORIES.map((cat) => (
-          <button
-            key={cat.id}
-            onClick={() => setActiveCategory(cat.id)}
-            style={{
-              padding: '0.75rem 1.25rem',
-              background: activeCategory === cat.id ? '#fff' : 'transparent',
-              color: activeCategory === cat.id ? '#111827' : '#6b7280',
-              border: 'none',
-              borderBottom: activeCategory === cat.id ? '2px solid #111827' : '2px solid transparent',
-              cursor: 'pointer',
-              fontSize: '0.95rem',
-              fontWeight: activeCategory === cat.id ? 600 : 400,
-              transition: 'all 0.2s',
-              marginBottom: '-1px',
-            }}
-          >
-            {cat.label}
-          </button>
-        ))}
+        <h1 style={{ margin: 0, fontSize: '1.5rem', color: '#111827', fontWeight: 600 }}>
+          文章列表
+        </h1>
         
-        {/* Search Box in Nav */}
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center' }}>
-          <input
-            type="text"
-            placeholder="搜索..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={{
-              width: '200px',
-              padding: '6px 12px',
-              border: '1px solid #d1d5db',
-              borderRadius: 4,
-              fontSize: '0.875rem',
-              outline: 'none',
-            }}
-          />
-        </div>
-      </nav>
+        {/* Search Box */}
+        <input
+          type="text"
+          placeholder="搜索..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          style={{
+            width: '240px',
+            padding: '8px 14px',
+            border: '1px solid #d1d5db',
+            borderRadius: 6,
+            fontSize: '0.9rem',
+            outline: 'none',
+          }}
+        />
+      </div>
 
       {/* Content Table */}
       {loading ? (
@@ -147,7 +124,7 @@ function BlogLayout() {
                   fontWeight: 600, 
                   fontSize: '0.875rem', 
                   color: '#374151',
-                  width: '20%',
+                  width: '25%',
                 }}>摘要</th>
                 <th style={{ 
                   padding: '14px 20px', 
@@ -155,7 +132,7 @@ function BlogLayout() {
                   fontWeight: 600, 
                   fontSize: '0.875rem', 
                   color: '#374151',
-                  width: '15%',
+                  width: '12%',
                 }}>时间</th>
                 <th style={{ 
                   padding: '14px 20px', 
@@ -163,7 +140,7 @@ function BlogLayout() {
                   fontWeight: 600, 
                   fontSize: '0.875rem', 
                   color: '#374151',
-                  width: '10%',
+                  width: '8%',
                 }}>操作</th>
               </tr>
             </thead>
