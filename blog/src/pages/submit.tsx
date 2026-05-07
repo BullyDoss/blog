@@ -3,7 +3,7 @@ import Layout from '@theme/Layout';
 
 export default function SubmitPage(): React.ReactElement {
   return (
-    <Layout title="我要投稿" description="向 BullyDoss 的笔记投稿">
+    <Layout title="投稿专区" description="向 BullyDoss 的笔记投稿">
       <main style={{ padding: '2rem 0' }}>
         <SubmitPageContent />
       </main>
@@ -52,16 +52,16 @@ function SubmitPageContent() {
             padding: '10px 20px',
             background: '#f3f4f6',
             border: '1px solid #d1d5db',
-            borderRadius: 8,
+            borderRadius: 6,
             cursor: 'pointer',
             fontSize: '0.95rem',
-            fontWeight: 600,
+            fontWeight: 500,
           }}
         >
-          ← 返回列表
+          返回列表
         </button>
         <SubmitForm onSuccess={() => {
-          alert('✅ 投稿成功！审核通过后将在此展示。');
+          alert('投稿成功！审核通过后将在此展示。');
           setView('list');
           fetchPosts();
         }} />
@@ -76,101 +76,92 @@ function SubmitPageContent() {
         textAlign: 'center',
         marginBottom: '2.5rem',
         paddingBottom: '2rem',
-        borderBottom: '2px solid #e5e7eb',
+        borderBottom: '1px solid #e5e7eb',
       }}>
-        <h1 style={{ fontSize: '2.25rem', margin: '0 0 0.75rem', color: '#111827' }}>
-          📥 投稿专区
+        <h1 style={{ fontSize: '2rem', margin: '0 0 0.75rem', color: '#111827', fontWeight: 600 }}>
+          投稿专区
         </h1>
-        <p style={{ fontSize: "1.1rem", color: "#6b7280", margin: 0, lineHeight: "1.6" }}>
-          分享你的想法和经验，让更多人看到你的精彩内容！
+        
+        <p style={{ fontSize: '1rem', color: '#6b7280', margin: 0, lineHeight: 1.6 }}>
+          分享你的想法和经验，让更多人看到你的精彩内容
         </p>
+
         <button
           onClick={() => setView('form')}
           style={{
             marginTop: '1.5rem',
-            padding: '14px 32px',
-            background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+            padding: '12px 32px',
+            background: '#111827',
             color: 'white',
             border: 'none',
-            borderRadius: 12,
+            borderRadius: 6,
             cursor: 'pointer',
-            fontSize: '1.1rem',
-            fontWeight: 700,
-            boxShadow: '0 4px 16px rgba(59, 130, 246, 0.4)',
-            transition: 'all 0.3s ease',
+            fontSize: '1rem',
+            fontWeight: 500,
           }}
-          onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-          onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
         >
-          ✍️ 我要投稿
+          我要投稿
         </button>
       </div>
 
       {/* Posts List */}
       {loading ? (
         <div style={{ textAlign: 'center', padding: '4rem', color: '#9ca3af' }}>
-          ⏳ 加载中...
+          加载中...
         </div>
       ) : posts.length === 0 ? (
         <div style={{
           textAlign: 'center',
           padding: '4rem 2rem',
           background: '#f9fafb',
-          borderRadius: 16,
-          border: '2px dashed #d1d5db',
+          borderRadius: 8,
+          border: '1px solid #e5e7eb',
         }}>
-          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📝</div>
-          <h2 style={{ margin: '0 0 0.75rem', color: '#374151', fontSize: '1.5rem' }}>
+          <h2 style={{ margin: '0 0 0.75rem', color: '#374151', fontSize: '1.25rem', fontWeight: 600 }}>
             还没有投稿文章
           </h2>
-          <p style={{ color: "#6b7280", margin: "0 0 1.5rem", fontSize: "1.05rem" }}>
-            成为第一个投稿者，分享你的精彩内容吧！
+          <p style={{ color: '#6b7280', margin: '0 0 1.5rem', fontSize: '1rem' }}>
+            成为第一个投稿者，分享你的精彩内容吧
           </p>
           <button
             onClick={() => setView('form')}
             style={{
-              padding: '12px 28px',
-              background: '#3b82f6',
+              padding: '10px 24px',
+              background: '#111827',
               color: 'white',
               border: 'none',
-              borderRadius: 10,
+              borderRadius: 6,
               cursor: 'pointer',
-              fontSize: '1rem',
-              fontWeight: 600,
-              boxShadow: '0 4px 12px rgba(59, 130, 246, 0.35)',
+              fontSize: '0.95rem',
+              fontWeight: 500,
             }}
           >
-            🚀 立即投稿
+            立即投稿
           </button>
         </div>
       ) : (
-        <div style={{ display: 'grid', gap: '1.75rem' }}>
+        <div style={{ display: 'grid', gap: '1.25rem' }}>
           {posts.map((post) => (
             <article
               key={post.id}
               style={{
                 background: 'white',
-                borderRadius: 12,
-                padding: '2rem',
-                boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+                borderRadius: 8,
+                padding: '1.75rem',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
                 border: '1px solid #e5e7eb',
-                transition: 'all 0.3s ease',
+                transition: 'box-shadow 0.2s ease',
               }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)';
-                e.currentTarget.style.transform = 'translateY(-2px)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.06)';
-                e.currentTarget.style.transform = 'translateY(0)';
-              }}
+              onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)'}
+              onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.06)'}
             >
               <header style={{ marginBottom: '1rem' }}>
                 <h2
                   style={{
                     margin: '0 0 0.75rem',
-                    fontSize: '1.5rem',
+                    fontSize: '1.35rem',
                     color: '#111827',
+                    fontWeight: 600,
                     cursor: 'pointer',
                   }}
                 >
@@ -188,17 +179,17 @@ function SubmitPageContent() {
                   color: '#6b7280',
                   fontSize: '0.9rem',
                 }}>
-                  <span>👤 {post.author || '匿名'}</span>
+                  <span>作者: {post.author || '匿名'}</span>
                   <span>|</span>
-                  <span>📅 {new Date(post.created_at).toLocaleDateString('zh-CN')}</span>
+                  <span>{new Date(post.created_at).toLocaleDateString('zh-CN')}</span>
                 </div>
               </header>
 
               <p style={{
-                color: "#4b5563",
-                lineHeight: "1.7",
+                color: '#4b5563',
+                lineHeight: 1.7,
                 margin: 0,
-                fontSize: '1rem',
+                fontSize: '0.95rem',
               }}>
                 {post.excerpt}
               </p>
@@ -213,25 +204,25 @@ function SubmitPageContent() {
               }}>
                 <span style={{
                   display: 'inline-block',
-                  padding: '4px 12px',
-                  background: '#dbeafe',
-                  color: '#1e40af',
-                  borderRadius: 20,
+                  padding: '3px 10px',
+                  background: '#f3f4f6',
+                  color: '#374151',
+                  borderRadius: 4,
                   fontSize: '0.85rem',
-                  fontWeight: 600,
+                  fontWeight: 500,
                 }}>
-                  📥 用户投稿
+                  用户投稿
                 </span>
                 <a
                   href={`/blog/${post.slug}`}
                   style={{
-                    color: '#3b82f6',
+                    color: '#111827',
                     textDecoration: 'none',
-                    fontWeight: 600,
-                    fontSize: '0.95rem',
+                    fontWeight: 500,
+                    fontSize: '0.9rem',
                   }}
                 >
-                  阅读全文 →
+                  阅读全文 ->
                 </a>
               </footer>
             </article>
@@ -247,23 +238,24 @@ function SubmitPageContent() {
             position: 'fixed',
             bottom: '2rem',
             right: '2rem',
-            width: '60px',
-            height: '60px',
+            width: '56px',
+            height: '56px',
             borderRadius: '50%',
-            background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+            background: '#111827',
             color: 'white',
             border: 'none',
             cursor: 'pointer',
-            fontSize: '1.75rem',
-            boxShadow: '0 4px 20px rgba(59, 130, 246, 0.5)',
-            transition: "all 0.3s ease",
+            fontSize: '1.5rem',
+            fontWeight: 700,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            transition: 'all 0.2s ease',
             zIndex: 1000,
           }}
-          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
           onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
           title="我要投稿"
         >
-          ✍️
+          +
         </button>
       )}
     </div>
@@ -302,16 +294,16 @@ function SubmitForm({ onSuccess }: { onSuccess: () => void }) {
       const data = await response.json();
 
       if (response.ok) {
-        setMessage({ type: 'success', text: '✅ 投稿成功！审核通过后将发布。' });
+        setMessage({ type: 'success', text: '投稿成功！审核通过后将发布。' });
         setTimeout(() => {
           onSuccess();
         }, 1500);
         setFormData({ title: '', author: '', content: '', email: '' });
       } else {
-        setMessage({ type: 'error', text: `❌ ${data.error || '投稿失败'}` });
+        setMessage({ type: 'error', text: `[ERROR] ${data.error || '投稿失败'}` });
       }
     } catch (err) {
-      setMessage({ type: 'error', text: '❌ 网络错误，请稍后重试' });
+      setMessage({ type: 'error', text: '[ERROR] 网络错误，请稍后重试' });
     } finally {
       setSubmitting(false);
     }
@@ -320,26 +312,26 @@ function SubmitForm({ onSuccess }: { onSuccess: () => void }) {
   return (
     <div style={{
       background: 'white',
-      borderRadius: 16,
+      borderRadius: 8,
       padding: '2.5rem',
-      boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
+      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
       border: '1px solid #e5e7eb',
     }}>
       <h2 style={{
-        fontSize: '1.75rem',
-        fontWeight: 700,
+        fontSize: '1.5rem',
+        fontWeight: 600,
         marginBottom: '0.5rem',
         color: '#111827',
         textAlign: 'center',
       }}>
-        ✍️ 我要投稿
+        我要投稿
       </h2>
       
       <p style={{
         textAlign: 'center',
         color: '#6b7280',
         marginBottom: '2rem',
-        fontSize: '1rem',
+        fontSize: '0.9rem',
       }}>
         欢迎分享你的想法！投稿内容将在审核后发布到「投稿专区」。
       </p>
@@ -349,22 +341,22 @@ function SubmitForm({ onSuccess }: { onSuccess: () => void }) {
           background: message.type === 'success' ? '#d1fae5' : '#fef2f2',
           border: `1px solid ${message.type === 'success' ? '#a7f3d0' : '#fecaca'}`,
           color: message.type === 'success' ? '#065f46' : '#dc2626',
-          padding: '14px 18px',
-          borderRadius: 10,
+          padding: '12px 16px',
+          borderRadius: 6,
           marginBottom: '1.5rem',
-          fontSize: "0.95rem",
-          lineHeight: "1.6",
+          fontSize: '0.9rem',
+          lineHeight: 1.6,
         }}>
           {message.text}
         </div>
       )}
 
       <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: '1.5rem' }}>
+        <div style={{ marginBottom: '1.25rem' }}>
           <label style={{
             display: 'block',
-            fontWeight: 600,
-            fontSize: '0.95rem',
+            fontWeight: 500,
+            fontSize: '0.875rem',
             color: '#374151',
             marginBottom: '0.5rem',
           }}>
@@ -379,25 +371,22 @@ function SubmitForm({ onSuccess }: { onSuccess: () => void }) {
             disabled={submitting}
             style={{
               width: '100%',
-              padding: '14px 18px',
-              border: '2px solid #e5e7eb',
-              borderRadius: 10,
-              fontSize: '1rem',
-              transition: 'border-color 0.2s',
+              padding: '10px 12px',
+              border: '1px solid #d1d5db',
+              borderRadius: 6,
+              fontSize: '0.95rem',
               boxSizing: 'border-box',
-              background: '#f9fafb',
+              outline: 'none',
             }}
-            onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
-            onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
           />
         </div>
 
-        <div style={{ marginBottom: '1.5rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+        <div style={{ marginBottom: '1.25rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
           <div>
             <label style={{
               display: 'block',
-              fontWeight: 600,
-              fontSize: '0.95rem',
+              fontWeight: 500,
+              fontSize: '0.875rem',
               color: '#374151',
               marginBottom: '0.5rem',
             }}>
@@ -412,24 +401,21 @@ function SubmitForm({ onSuccess }: { onSuccess: () => void }) {
               disabled={submitting}
               style={{
                 width: '100%',
-                padding: '14px 18px',
-                border: '2px solid #e5e7eb',
-                borderRadius: 10,
-                fontSize: '1rem',
-                transition: 'border-color 0.2s',
+                padding: '10px 12px',
+                border: '1px solid #d1d5db',
+                borderRadius: 6,
+                fontSize: '0.95rem',
                 boxSizing: 'border-box',
-                background: '#f9fafb',
+                outline: 'none',
               }}
-              onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
-              onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
             />
           </div>
 
           <div>
             <label style={{
               display: 'block',
-              fontWeight: 600,
-              fontSize: '0.95rem',
+              fontWeight: 500,
+              fontSize: '0.875rem',
               color: '#374151',
               marginBottom: '0.5rem',
             }}>
@@ -443,25 +429,22 @@ function SubmitForm({ onSuccess }: { onSuccess: () => void }) {
               disabled={submitting}
               style={{
                 width: '100%',
-                padding: '14px 18px',
-                border: '2px solid #e5e7eb',
-                borderRadius: 10,
-                fontSize: '1rem',
-                transition: 'border-color 0.2s',
+                padding: '10px 12px',
+                border: '1px solid #d1d5db',
+                borderRadius: 6,
+                fontSize: '0.95rem',
                 boxSizing: 'border-box',
-                background: '#f9fafb',
+                outline: 'none',
               }}
-              onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
-              onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
             />
           </div>
         </div>
 
-        <div style={{ marginBottom: '2rem' }}>
+        <div style={{ marginBottom: '1.5rem' }}>
           <label style={{
             display: 'block',
-            fontWeight: 600,
-            fontSize: '0.95rem',
+            fontWeight: 500,
+            fontSize: '0.875rem',
             color: '#374151',
             marginBottom: '0.5rem',
           }}>
@@ -472,24 +455,21 @@ function SubmitForm({ onSuccess }: { onSuccess: () => void }) {
             value={formData.content}
             onChange={(e) => setFormData({ ...formData, content: e.target.value })}
             required
-            rows={15}
+            rows={12}
             disabled={submitting}
-            placeholder="在这里撰写你的文章...&#10;&#10;支持 Markdown 语法：&#10;• **粗体文字**&#10;• *斜体文字*&#10;• # 标题&#10;- 列表项&#10;&#10;建议字数：500-3000字"
+            placeholder="在这里撰写你的文章...&#10;&#10;支持 Markdown 语法：&#10;- **粗体文字**&#10;- *斜体文字*&#10;- # 标题&#10;- 列表项"
             style={{
               width: '100%',
-              padding: '14px 18px',
-              border: '2px solid #e5e7eb',
-              borderRadius: 10,
-              fontSize: "1rem",
-              lineHeight: "1.7",
-              transition: "border-color 0.2s",
+              padding: '10px 12px',
+              border: '1px solid #d1d5db',
+              borderRadius: 6,
+              fontSize: '0.95rem',
+              lineHeight: 1.6,
               boxSizing: 'border-box',
               fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
               resize: 'vertical',
-              background: '#f9fafb',
+              outline: 'none',
             }}
-            onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
-            onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
           />
         </div>
 
@@ -498,32 +478,31 @@ function SubmitForm({ onSuccess }: { onSuccess: () => void }) {
           disabled={submitting}
           style={{
             width: '100%',
-            padding: '16px',
-            background: submitting ? '#9ca3af' : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+            padding: '12px',
+            background: submitting ? '#9ca3af' : '#111827',
             color: 'white',
             border: 'none',
-            borderRadius: 12,
-            fontSize: '1.1rem',
-            fontWeight: 700,
+            borderRadius: 6,
+            fontSize: '1rem',
+            fontWeight: 500,
             cursor: submitting ? 'not-allowed' : 'pointer',
-            transition: 'all 0.3s ease',
-            boxShadow: submitting ? 'none' : '0 4px 16px rgba(59, 130, 246, 0.4)',
+            transition: 'background 0.2s',
           }}
         >
-          {submitting ? '⏳ 提交中...' : '🚀 提交投稿'}
+          {submitting ? '提交中...' : '提交投稿'}
         </button>
 
         <p style={{
           marginTop: '1.25rem',
           padding: '1rem',
-          background: '#f0fdf4',
-          borderRadius: 8,
-          fontSize: '0.9rem',
-          color: '#166534',
-          lineHeight: "1.6",
+          background: '#f9fafb',
+          borderRadius: 6,
+          fontSize: '0.875rem',
+          color: '#4b5563',
+          lineHeight: 1.6,
           textAlign: 'center',
         }}>
-          🔒 投稿须知：提交的内容将在审核通过后发布，请确保内容原创且符合社区规范。
+          投稿须知：提交的内容将在审核通过后发布，请确保内容原创且符合社区规范。
         </p>
       </form>
     </div>
