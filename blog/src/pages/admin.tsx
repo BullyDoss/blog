@@ -9,6 +9,16 @@ export default function AdminPage(): React.ReactElement {
   );
 }
 
+if (typeof window !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = `
+    .admin-full-width { max-width: none !important; width: 100% !important; padding: 0 !important; margin: 0 !important; }
+    .admin-full-width > * { max-width: none !important; }
+    body.admin-page { overflow-x: hidden; }
+  `;
+  document.head.appendChild(style);
+}
+
 const CATEGORIES = [
   { id: 'notes', label: '学习笔记' },
   { id: 'brainstorm', label: '思维风暴' },
@@ -157,7 +167,7 @@ function AdminPanel({ token, onLogout, apiBase }: { token: string; onLogout: () 
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
   return (
-    <div style={{ minHeight: '100vh', background: '#fff', display: 'flex', flexDirection: 'column' }}>
+    <div className="admin-full-width" style={{ minHeight: '100vh', background: '#fff', display: 'flex', flexDirection: 'column', width: '100vw' }}>
       <header style={{
         background: '#111827',
         color: 'white',

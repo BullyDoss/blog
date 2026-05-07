@@ -21,7 +21,21 @@ function formatDate(dateStr: string | null | undefined) {
   if (!dateStr) return '-';
   const d = new Date(dateStr);
   if (isNaN(d.getTime()) || d.getFullYear() < 2000 || d.getFullYear() > 2100) return '-';
-  return d.toLocaleDateString('zh-CN');
+  const now = new Date();
+  const diff = now.getTime() - d.getTime();
+  if (diff < 60000) return '刚刚';
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`;
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`;
+  if (diff < 604800000) return `${Math.floor(diff / 86400000)}天前`;
+  return `${d.getMonth() + 1}/${d.getDate()}`;
+}
+
+function formatDateTime(dateStr: string | null | undefined) {
+  if (!dateStr) return '-';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime()) || d.getFullYear() < 2000 || d.getFullYear() > 2100) return '-';
+  const weekDays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 ${weekDays[d.getDay()]} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
 function BlogLayout() {
@@ -280,15 +294,20 @@ function BlogLayout() {
                           cursor: 'pointer',
                         }}
                       >
-                        <h2 style={{ margin: '0 0 0.4rem', fontSize: isMobile ? '1.15rem' : '1.35rem', fontWeight: 600, color: '#111827' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.35rem' }}>
+                          <span style={{ display: 'inline-block', padding: '2px 8px', background: '#f3f4f6', color: '#6b7280', borderRadius: 4, fontSize: isMobile ? '0.72rem' : '0.78rem', fontWeight: 500, whiteSpace: 'nowrap' }}>
+                            {CATEGORIES.find(c => c.id === post.category)?.label || post.category}
+                          </span>
+                          <span style={{ fontSize: isMobile ? '0.75rem' : '0.82rem', color: '#9ca3af', whiteSpace: 'nowrap' }}>
+                            {formatDate(post.created_at)}
+                          </span>
+                        </div>
+                        <h2 style={{ margin: '0 0 0.4rem', fontSize: isMobile ? '1.15rem' : '1.35rem', fontWeight: 600, color: '#111827', lineHeight: 1.4 }}>
                           {post.title}
                         </h2>
-                        <p style={{ margin: '0 0 0.6rem', color: '#6b7280', fontSize: isMobile ? '0.88rem' : '0.95rem', lineHeight: 1.6 }}>
+                        <p style={{ margin: 0, color: '#6b7280', fontSize: isMobile ? '0.88rem' : '0.95rem', lineHeight: 1.6 }}>
                           {post.excerpt || '-'}
                         </p>
-                        <div style={{ textAlign: 'right', fontSize: '0.82rem', color: '#9ca3af' }}>
-                          {formatDate(post.created_at)}
-                        </div>
                       </article>
                     ))}
                   </div>
@@ -408,7 +427,7 @@ function ArticleDetail({ post, categories, onBack, apiBase, isMobile }: {
       <header style={{ marginBottom: isMobile ? '1.5rem' : '2.5rem' }}>
         <h1 style={{ margin: '0 0 0.4rem', fontSize: isMobile ? '1.5rem' : '2rem', fontWeight: 700, color: '#111827' }}>{post.title}</h1>
         <p style={{ margin: 0, fontSize: '0.9rem', color: '#9ca3af' }}>
-          {formatDate(post.created_at)}
+          {formatDateTime(post.created_at)}
         </p>
       </header>
 

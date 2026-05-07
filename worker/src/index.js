@@ -1,4 +1,4 @@
-// v2.4 - GitHub Actions auto-deploy 2026-05
+// v2.5 - support created_at in create/update + full-width admin
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -346,7 +346,7 @@ async function getAdminPostById(id, env, headers) {
 
 async function createAdminPost(request, env, headers) {
   const body = await request.json();
-  const { title, content, category = 'notes', excerpt, tags } = body;
+  const { title, content, category = 'notes', excerpt, tags, created_at } = body;
 
   if (!title || !content) {
     return jsonResponse({ error: '标题和内容不能为空' }, 400, headers);
@@ -359,10 +359,12 @@ async function createAdminPost(request, env, headers) {
   const slug = body.slug || generateSlug(title);
   const autoExcerpt = excerpt || (content.length > 150 ? content.slice(0, 150) + '...' : content);
 
+  const createdAt = created_at ? new Date(created_at).toISOString() : new Date().toISOString();
+
   const result = await env.DB.prepare(
-    `INSERT INTO posts (slug, title, content, excerpt, category, status, author)
-     VALUES (?, ?, ?, ?, ?, 'published', 'admin')`
-  ).bind(slug, title, content, autoExcerpt, category).run();
+    `INSERT INTO posts (slug, title, content, excerpt, category, status, author, created_at)
+     VALUES (?, ?, ?, ?, ?, 'published', 'admin', ?)`
+  ).bind(slug, title, content, autoExcerpt, category, createdAt).run();
 
   return jsonResponse(
     { id: result.meta.last_row_id, message: '创建成功' },
@@ -373,7 +375,7 @@ async function createAdminPost(request, env, headers) {
 
 async function updateAdminPost(id, request, env, headers) {
   const body = await request.json();
-  const { title, content, excerpt, slug, category, status } = body;
+  const { title, content, excerpt, slug, category, status, created_at } = body;
 
   const existingPost = await env.DB.prepare(
     'SELECT * FROM posts WHERE id = ?'
@@ -383,6 +385,8 @@ async function updateAdminPost(id, request, env, headers) {
     return jsonResponse({ error: '文章不存在' }, 404, headers);
   }
 
+  const finalCreatedAt = created_at ? new Date(created_at).toISOString() : (existingPost.created_at || new Date().toISOString());
+
   await env.DB.prepare(
     `UPDATE posts SET 
       title = COALESCE(?, title), 
@@ -391,6 +395,7 @@ async function updateAdminPost(id, request, env, headers) {
       slug = COALESCE(?, slug), 
       category = COALESCE(?, category),
       status = COALESCE(?, status),
+      created_at = ?,
       updated_at = datetime('now')
      WHERE id = ?`
   ).bind(
@@ -400,6 +405,7 @@ async function updateAdminPost(id, request, env, headers) {
     slug || null,
     category || null,
     status || null,
+    finalCreatedAt,
     id
   ).run();
 
