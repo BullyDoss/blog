@@ -14,10 +14,3 @@ database_id = "790e82a4-170b-473e-8b0d-09f0f7d3aa04"
 [[r2_buckets]]
 binding = "IMAGES"
 bucket_name = "blog-images"
-
-[triggers]
-crons = [ "0 0 * * *" ]
-
-[[routes]]
-pattern = "api.bullydoss.com"
-custom_domain = true
