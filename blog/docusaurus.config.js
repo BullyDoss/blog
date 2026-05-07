@@ -2,7 +2,7 @@ module.exports = {
   title: 'BullyDoss的不务正业笔记',
   tagline: '学习笔记 · 思维风暴 · 夸夸其谈 · 打怪经验',
 
-  url: 'https://c8a118ad.bullydoss.pages.dev',
+  url: 'https://bullydoss.com',
   baseUrl: '/',
 
   onBrokenLinks: 'warn',
@@ -25,7 +25,7 @@ module.exports = {
   },
 
   customFields: {
-    apiBaseUrl: process.env.API_BASE_URL || 'https://blog-api.bullydoss-blog.workers.dev',
+    apiBaseUrl: process.env.API_BASE_URL || 'https://api.bullydoss.com',
     r2BucketUrl: process.env.R2_BUCKET_URL || 'https://pub-xxxxx.r2.dev',
   },
 
