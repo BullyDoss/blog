@@ -51,31 +51,6 @@ module.exports = {
         href: '/admin',
       },
       items: [
-        {
-          to: '/tags/学习笔记',
-          label: '学习笔记',
-          position: 'left',
-        },
-        {
-          to: '/tags/思维风暴',
-          label: '思维风暴',
-          position: 'left',
-        },
-        {
-          to: '/tags/夸夸其谈',
-          label: '夸夸其谈',
-          position: 'left',
-        },
-        {
-          to: '/tags/打怪经验',
-          label: '打怪经验',
-          position: 'left',
-        },
-        {
-          to: '/submit',
-          label: '投稿专区',
-          position: 'left',
-        },
         { to: '/admin', label: '管理后台', position: 'right' },
       ],
     },
