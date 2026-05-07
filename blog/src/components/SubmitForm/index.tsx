@@ -12,13 +12,20 @@ export default function SubmitForm() {
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
 
+  const getApiBase = () => {
+    if (typeof window !== 'undefined' && window.__CONFIG__) {
+      return window.__CONFIG__.apiBaseUrl || 'https://api.bullydoss.com';
+    }
+    return 'https://api.bullydoss.com';
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     setMessage({ type: '', text: '' });
 
     try {
-      const response = await fetch(`${window.customFields.apiBaseUrl}/api/submit`, {
+      const response = await fetch(`${getApiBase()}/api/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
