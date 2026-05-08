@@ -6,37 +6,37 @@
 
 **线上地址**: <https://blog.bullydoss.com>
 
-***
+---
 
-## \[!] 重要说明 - 私有仓库声明
+## [!] 重要说明 - 私有仓库声明
 
 **Worker 后端服务已迁移至私有仓库**
 
 - **原因**: Worker 代码包含敏感配置信息（数据库 ID、R2 配置、管理员凭据等），不适合公开
-- **私有仓库地址**: <https://github.com/BullyDoss/blog-worker-private>
+- **私有仓库地址**: https://github.com/BullyDoss/blog-worker-private
 - **访问权限**: 仅限仓库所有者
+- **原公开仓库**: 已删除
 
-### 敏感信息清单
+### 敏感信息清单（已从公开仓库移除）
 
 以下信息已移至私有仓库或 Wrangler Secrets：
 
-| 信息类型                 | 示例                      | 存储位置               |
-| -------------------- | ----------------------- | ------------------ |
-| D1 数据库 ID            | `790e82a4-...`          | wrangler.toml (私有) |
-| R2 公开 URL            | `pub-b0a9b33e...r2.dev` | wrangler.toml (私有) |
-| GitHub Client Secret | `ghp_xxxxxx`            | Wrangler Secrets   |
-| 管理员密码                | `ADMIN_PASSWORD`        | Wrangler Secrets   |
-| JWT 密钥               | `JWT_SECRET`            | Wrangler Secrets   |
-| GitHub Client ID     | `Ov23liL4...`           | 前端配置 (已脱敏)         |
+| 信息类型 | 示例 | 存储位置 |
+|---------|------|---------|
+| D1 数据库 ID | `790e82a4-...` | wrangler.toml (私有) |
+| R2 公开 URL | `pub-b0a9b33e...r2.dev` | wrangler.toml (私有) |
+| GitHub Client Secret | `ghp_xxxxxx` | Wrangler Secrets |
+| 管理员密码 | `ADMIN_PASSWORD` | Wrangler Secrets |
+| JWT 密钥 | `JWT_SECRET` | Wrangler Secrets |
+| GitHub Client ID | `Ov23liL4...` | 前端配置 (已脱敏) |
 
 **安全建议**: 如需部署此项目，请务必：
-
 1. 创建自己的 Cloudflare 账号
 2. 生成新的数据库和 R2 存储桶
 3. 设置强密码和随机密钥
 4. 不要使用任何默认值或硬编码的凭证
 
-***
+---
 
 ## 项目结构
 
@@ -74,11 +74,12 @@ Blog/
 │   ├── package.json             # 依赖管理
 │   └── tsconfig.json            # TypeScript 配置
 │
-├── worker/                      # Cloudflare Worker 后端服务
+├── worker/                      # Cloudflare Worker 后端服务（已移至私有仓库）
 │   ├── src/index.js             # API 主逻辑（文章、评论、投稿、R2）
-│   ├── wrangler.toml           # Worker 配置（D1、R2、环境变量）
+│   ├── wrangler.toml           # Worker 配置（D1、R2、环境变量）- 包含敏感信息
 │   ├── package.json             # 依赖管理
-│   └── .gitignore               # Worker 忽略规则
+│   ├── .gitignore               # Worker 忽略规则
+│   └── worker-readme.md        # 详细 API 文档（无敏感信息）
 │
 ├── .github/workflows/           # CI/CD 自动部署
 │   ├── deploy.yml              # 博客部署工作流
@@ -108,13 +109,13 @@ Blog/
 
 ### 文章分类
 
-| 分类   | 标识           | 描述     |
-| ---- | ------------ | ------ |
-| 学习笔记 | 记录知识，沉淀思考    | <br /> |
-| 思维风暴 | 提问、分享想法、碰撞灵感 | <br /> |
-| 夸夸其谈 | 分享生活，记录瞬间    | <br /> |
-| 打怪经验 | 复盘成长，积累阅历    | <br /> |
-| 投稿专区 | 精选投稿内容展示     | <br /> |
+| 分类   | 标识           | 描述 |
+| ---- | ------------ | -- |
+| 学习笔记 | 记录知识，沉淀思考    |    |
+| 思维风暴 | 提问、分享想法、碰撞灵感 |    |
+| 夸夸其谈 | 分享生活，记录瞬间    |    |
+| 打怪经验 | 复盘成长，积累阅历    |    |
+| 投稿专区 | 精选投稿内容展示     |    |
 
 ***
 
@@ -223,8 +224,10 @@ bucket_name = "blog-images"
 window.__CONFIG__ = {
   apiBaseUrl: 'https://api.bullydoss.com'
 };
-window.__GITHUB_CLIENT_ID__ = 'Ov23liL4aPBlHQhU3WTE';
+window.__GITHUB_CLIENT_ID__ = 'your-github-client-id';  // 替换为你的 GitHub OAuth App ID
 ```
+
+**[!] 注意**: GitHub Client ID 需要你自己在 GitHub Developer Settings 中创建 OAuth App 获取。
 
 ***
 
