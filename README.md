@@ -4,9 +4,9 @@
 
 > 技术栈：Cloudflare Pages + Docusaurus + Workers + D1 + R2
 
-**线上地址**: [https://blog.bullydoss.com](https://blog.bullydoss.com)
+**线上地址**: <https://blog.bullydoss.com>
 
----
+***
 
 ## 项目结构
 
@@ -58,51 +58,51 @@ Blog/
 └── README.md                   # 本文件
 ```
 
----
+***
 
 ## 核心功能
 
 ### 已实现功能
 
-| 功能 | 技术实现 | 说明 |
-|------|----------|------|
-| **博客文章系统** | Docusaurus + Worker API | Markdown 写作，支持分类标签、实时搜索 |
-| **移动端优化** | 自定义响应式布局 | 侧边栏抽屉式导航、独立滚动、搜索过滤 |
-| **评论系统** | 内嵌评论组件 | 支持登录后发表评论 |
-| **用户投稿** | Worker API + D1 | 前端提交 -> 后台审核 -> 发布展示 |
-| **图片上传** | R2 对象存储 | 支持 JPG/PNG/GIF/WebP，最大 5MB |
-| **管理后台** | Docusaurus 内嵌页 | 文章 CRUD、投稿审核 |
-| **GitHub 登录** | OAuth 集成 | 安全的用户认证 |
-| **自动部署** | GitHub Actions | 推送 main -> 自动构建部署 |
-| **全球 CDN** | Cloudflare Pages | 边缘节点加速 |
+| 功能            | 技术实现                    | 说明                         |
+| ------------- | ----------------------- | -------------------------- |
+| **博客文章系统**    | Docusaurus + Worker API | Markdown 写作，支持分类标签、实时搜索    |
+| **移动端优化**     | 自定义响应式布局                | 侧边栏抽屉式导航、独立滚动、搜索过滤         |
+| **评论系统**      | 内嵌评论组件                  | 支持登录后发表评论                  |
+| **用户投稿**      | Worker API + D1         | 前端提交 -> 后台审核 -> 发布展示       |
+| **图片上传**      | R2 对象存储                 | 支持 JPG/PNG/GIF/WebP，最大 5MB |
+| **管理后台**      | Docusaurus 内嵌页          | 文章 CRUD、投稿审核               |
+| **GitHub 登录** | OAuth 集成                | 安全的用户认证                    |
+| **自动部署**      | GitHub Actions          | 推送 main -> 自动构建部署          |
+| **全球 CDN**    | Cloudflare Pages        | 边缘节点加速                     |
 
 ### 文章分类
 
-| 分类 | 标识 | 描述 |
-|------|------|------|
-| 学习笔记 | 记录知识，沉淀思考 |
-| 思维风暴 | 提问、分享想法、碰撞灵感 |
-| 夸夸其谈 | 分享生活，记录瞬间 |
-| 打怪经验 | 复盘成长，积累阅历 |
-| 投稿专区 | 精选投稿内容展示 |
+| 分类   | 标识           | 描述 |
+| ---- | ------------ | -- |
+| 学习笔记 | 记录知识，沉淀思考    |    |
+| 思维风暴 | 提问、分享想法、碰撞灵感 |    |
+| 夸夸其谈 | 分享生活，记录瞬间    |    |
+| 打怪经验 | 复盘成长，积累阅历    |    |
+| 投稿专区 | 精选投稿内容展示     |    |
 
----
+***
 
 ## API 接口（Worker）
 
-| 方法 | 路径 | 说明 | 认证 |
-|------|------|------|------|
-| `GET` | `/api/posts` | 获取文章列表 | 公开 |
-| `GET` | `/api/posts/:slug` | 获取文章详情 | 公开 |
-| `POST` | `/api/submit` | 用户投稿 | 公开 |
-| `POST` | `/api/images/upload` | 上传图片到 R2 | 公开 |
-| `POST` | `/api/admin/login` | 管理员登录 | 公开 |
-| `GET` | `/api/admin/posts` | 获取所有文章 | JWT |
-| `POST` | `/api/admin/posts` | 创建文章 | JWT |
-| `PUT` | `/api/admin/posts/:id` | 更新文章 | JWT |
-| `DELETE` | `/api/admin/posts/:id` | 删除文章 | JWT |
+| 方法       | 路径                     | 说明       | 认证  |
+| -------- | ---------------------- | -------- | --- |
+| `GET`    | `/api/posts`           | 获取文章列表   | 公开  |
+| `GET`    | `/api/posts/:slug`     | 获取文章详情   | 公开  |
+| `POST`   | `/api/submit`          | 用户投稿     | 公开  |
+| `POST`   | `/api/images/upload`   | 上传图片到 R2 | 公开  |
+| `POST`   | `/api/admin/login`     | 管理员登录    | 公开  |
+| `GET`    | `/api/admin/posts`     | 获取所有文章   | JWT |
+| `POST`   | `/api/admin/posts`     | 创建文章     | JWT |
+| `PUT`    | `/api/admin/posts/:id` | 更新文章     | JWT |
+| `DELETE` | `/api/admin/posts/:id` | 删除文章     | JWT |
 
----
+***
 
 ## 快速开始
 
@@ -122,7 +122,7 @@ npx wrangler dev
 # 访问 http://localhost:8787
 ```
 
----
+***
 
 ## 部署指南
 
@@ -152,7 +152,7 @@ cd ../worker
 npx wrangler deploy
 ```
 
----
+***
 
 ## 核心配置文件
 
@@ -196,7 +196,7 @@ window.__CONFIG__ = {
 window.__GITHUB_CLIENT_ID__ = 'Ov23liL4aPBlHQhU3WTE';
 ```
 
----
+***
 
 ## 日常使用
 
@@ -208,19 +208,18 @@ window.__GITHUB_CLIENT_ID__ = 'Ov23liL4aPBlHQhU3WTE';
 
 访问博客首页 -> 点击管理入口 -> GitHub 登录即可使用。
 
----
+***
 
-## 成本估算（完全免费！）
+## 成本估算
 
-| 服务 | 免费额度 | 个人博客是否够用 |
-|------|----------|------------------|
-| **Cloudflare Pages** | 无限静态站点 | 完全够用 |
-| **Workers** | 10 万次请求/天 | 完全够用 |
-| **D1 数据库** | 5GB 存储 + 2500万次读取/月 | 完全够用 |
-| **R2 存储** | 10GB 存储 + 1000万次 A类操作/月 | 完全够用 |
-| **总计** | **$0/月** | **完全免费** |
+| 服务                   | 额度                      |
+| -------------------- | ----------------------- |
+| **Cloudflare Pages** | 无限静态站点                  |
+| **Workers**          | 10 万次请求/天               |
+| **D1 数据库**           | 5GB 存储 + 2500万次读取/月     |
+| **R2 存储**            | 10GB 存储 + 1000万次 A类操作/月 |
 
----
+***
 
 ## 故障排查
 
@@ -241,24 +240,6 @@ npx wrangler dev          # 本地开发模式
 npx wrangler tail         # 查看实时日志
 ```
 
----
+***
 
-## 项目状态
-
-- [x] Docusaurus 博客系统 - 运行中
-- [x] Cloudflare Worker API - 已部署
-- [x] 自动化部署 (GitHub Actions) - 已配置
-- [x] 移动端响应式布局 - 已完成
-- [x] 文章搜索功能 - 已完成
-- [x] GitHub OAuth 登录 - 已集成
-- [x] R2 图片存储 - 已配置
-
----
-
-## License
-
-MIT License
-
----
-
-**Built with love using Cloudflare & Docusaurus**
+##
