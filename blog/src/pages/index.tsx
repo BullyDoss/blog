@@ -189,7 +189,7 @@ function BlogLayout() {
           {!isMobile || isMobileSidebarOpen ? (
             <>
               <div style={{
-                padding: isMobile ? '0.625rem 1rem 1.7rem 1rem' : '1.125rem 1rem 3.5rem 1rem',
+                padding: isMobile ? '0.625rem 1rem 1.7rem 1rem' : '0.75rem 1rem',
                 borderBottom: '1px solid #e5e7eb',
                 fontWeight: 600,
                 fontSize: '0.85rem',
@@ -313,7 +313,7 @@ function BlogLayout() {
           <nav style={{
             display: 'flex',
             gap: isMobile ? '1rem' : '2rem',
-            padding: isMobile ? '0.625rem 1.25rem' : '1.25rem 3rem',
+            padding: isMobile ? '0.625rem 1.25rem' : '0.75rem 3rem',
             borderBottom: '1px solid #e5e7eb',
             background: '#fff',
             position: 'relative',
@@ -330,7 +330,7 @@ function BlogLayout() {
               <button key={cat.id}
                 onClick={() => { setActiveCategory(cat.id); setSelectedPostSlug(null); setShowSubmitForm(false); }}
                 style={{
-                  padding: isMobile ? '0.75rem 0' : '1rem 0',
+                  padding: isMobile ? '0.75rem 0' : '0.625rem 0',
                   background: 'transparent',
                   color: (activeCategory === 'submit' && !showSubmitForm) && cat.id === 'submit' ? '#111827' : (activeCategory === cat.id ? '#111827' : '#6b7280'),
                   border: 'none',
