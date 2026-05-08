@@ -189,7 +189,7 @@ function BlogLayout() {
           {!isMobile || isMobileSidebarOpen ? (
             <>
               <div style={{
-                padding: isMobile ? '0.625rem 1rem 1.7rem 1rem' : '1.125rem 1rem',
+                padding: isMobile ? '0.625rem 1rem 1.7rem 1rem' : '1.125rem 1rem 3.5rem 1rem',
                 borderBottom: '1px solid #e5e7eb',
                 fontWeight: 600,
                 fontSize: '0.85rem',
