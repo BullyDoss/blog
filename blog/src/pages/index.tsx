@@ -87,6 +87,20 @@ function BlogLayout() {
   }, []);
 
   useEffect(() => {
+    if (isMobile && isMobileSidebarOpen) {
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    };
+  }, [isMobile, isMobileSidebarOpen]);
+
+  useEffect(() => {
     if (selectedPostSlug) {
       setFullPostData(null);
       fetch(`${getApiBase()}/api/posts/${selectedPostSlug}`)
@@ -175,7 +189,7 @@ function BlogLayout() {
           {!isMobile || isMobileSidebarOpen ? (
             <>
               <div style={{
-                padding: isMobile ? '0.625rem 1rem' : '1.125rem 1rem',
+                padding: isMobile ? '0.625rem 1rem 1.7rem 1rem' : '1.125rem 1rem',
                 borderBottom: '1px solid #e5e7eb',
                 fontWeight: 600,
                 fontSize: '0.85rem',
