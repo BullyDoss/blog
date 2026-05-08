@@ -164,7 +164,7 @@ function BlogLayout() {
           {!isMobile || isMobileSidebarOpen ? (
             <>
               <div style={{
-                padding: isMobile ? '0.75rem 1rem' : '1.25rem 1rem',
+                padding: isMobile ? '0.625rem 1rem' : '1.125rem 1rem',
                 borderBottom: '1px solid #e5e7eb',
                 fontWeight: 600,
                 fontSize: '0.85rem',
@@ -233,9 +233,14 @@ function BlogLayout() {
         {/* Right Content Area */}
         <main style={{
           flex: 1,
-          overflowY: 'auto',
+          overflowY: isMobile && isMobileSidebarOpen ? 'hidden' : 'auto',
           background: '#fff',
           minWidth: 0,
+          position: isMobile && isMobileSidebarOpen ? 'fixed' : 'relative',
+          top: isMobile && isMobileSidebarOpen ? '52px' : 'auto',
+          left: 0,
+          right: 0,
+          bottom: 0,
         }}>
           {/* Category Tabs */}
           <nav style={{
