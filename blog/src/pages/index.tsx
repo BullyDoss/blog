@@ -69,6 +69,7 @@ function BlogLayout() {
   const [loading, setLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
+  const [sidebarSearchQuery, setSidebarSearchQuery] = useState<string>('');
   const [fullPostData, setFullPostData] = useState<any>(null);
 
   const getApiBase = () => {
@@ -122,6 +123,14 @@ function BlogLayout() {
     );
   }
 
+  let filteredSidebarPosts = displayPosts;
+  if (sidebarSearchQuery.trim()) {
+    const q = sidebarSearchQuery.toLowerCase().trim();
+    filteredSidebarPosts = displayPosts.filter(p =>
+      p.title?.toLowerCase().includes(q)
+    );
+  }
+
   const currentCategory = CATEGORIES.find(c => c.id === activeCategory);
   const categoryPosts = displayPosts.filter(p => p.category === activeCategory);
   const selectedPost = fullPostData || allPosts.find(p => p.slug === selectedPostSlug);
@@ -160,6 +169,8 @@ function BlogLayout() {
           transition: 'width 0.2s ease',
           boxShadow: isMobile && isMobileSidebarOpen ? '2px 0 12px rgba(0,0,0,0.08)' : 'none',
           overflowX: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
         }} onClick={() => { if (isMobile && isMobileSidebarOpen) setIsMobileSidebarOpen(false); }}>
           {!isMobile || isMobileSidebarOpen ? (
             <>
@@ -172,6 +183,11 @@ function BlogLayout() {
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
+                position: 'sticky',
+                top: 0,
+                background: '#fff',
+                zIndex: 10,
+                flexShrink: 0,
               }}>
                 文章导航
                 {isMobile && (
@@ -180,13 +196,50 @@ function BlogLayout() {
                 )}
               </div>
 
-              <div style={{ padding: '0' }}>
+              <div style={{
+                padding: '0.5rem 0.75rem',
+                borderBottom: '1px solid #f3f4f6',
+                position: 'sticky',
+                top: isMobile ? '38px' : '48px',
+                background: '#fff',
+                zIndex: 9,
+                flexShrink: 0,
+              }}>
+                <input
+                  type="text"
+                  value={sidebarSearchQuery}
+                  onChange={(e) => setSidebarSearchQuery(e.target.value)}
+                  placeholder="搜索文章..."
+                  onClick={(e) => e.stopPropagation()}
+                  style={{
+                    width: '100%',
+                    padding: '0.5rem 0.75rem',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: 6,
+                    fontSize: '0.82rem',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                    background: '#f9fafb',
+                    transition: 'border-color 0.2s, background 0.2s',
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#d1d5db';
+                    e.target.style.background = '#fff';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#e5e7eb';
+                    e.target.style.background = '#f9fafb';
+                  }}
+                />
+              </div>
+
+              <div style={{ padding: '0', flex: 1, overflowY: 'auto' }}>
                 {loading ? (
                   <div style={{ textAlign: 'center', padding: '2rem', color: '#9ca3af', fontSize: '0.85rem' }}>加载中...</div>
-                ) : displayPosts.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '2rem 1rem', color: '#9ca3af', fontSize: '0.82rem' }}>暂无文章</div>
+                ) : filteredSidebarPosts.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '2rem 1rem', color: '#9ca3af', fontSize: '0.82rem' }}>{sidebarSearchQuery ? '未找到匹配的文章' : '暂无文章'}</div>
                 ) : (
-                  displayPosts.map((post) => {
+                  filteredSidebarPosts.map((post) => {
                     const isSelected = post.slug === selectedPostSlug;
                     return (
                       <article key={post.id} onClick={(e) => { e.stopPropagation(); handlePostClick(post); }}
