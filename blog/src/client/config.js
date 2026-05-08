@@ -3,5 +3,5 @@ export function onClientExec() {
     apiBaseUrl: 'https://blog-api.bullydoss-blog.workers.dev',
   };
 
-  window.__GITHUB_CLIENT_ID__ = 'YOUR_GITHUB_CLIENT_ID';
+  window.__GITHUB_CLIENT_ID__ = 'Ov23liL4aPBlHQhU3WTE';
 }
