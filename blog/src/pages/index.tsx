@@ -72,6 +72,8 @@ function BlogLayout() {
   const [sidebarSearchQuery, setSidebarSearchQuery] = useState<string>('');
   const [fullPostData, setFullPostData] = useState<any>(null);
 
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
   const getApiBase = () => {
     if (typeof window !== 'undefined' && window.__CONFIG__) {
       return window.__CONFIG__.apiBaseUrl || 'https://blog-api.bullydoss-blog.workers.dev';
@@ -158,8 +160,6 @@ function BlogLayout() {
   const handleBackToList = () => {
     setSelectedPostSlug(null);
   };
-
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
   return (
     <div style={{
