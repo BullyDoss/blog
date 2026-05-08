@@ -14,6 +14,7 @@ interface GitHubLoginProps {
   onLoginSuccess?: (user: User) => void;
   onLogout?: () => void;
   trigger?: React.ReactNode;
+  compact?: boolean;
 }
 
 const STORAGE_KEY = 'github_auth_token';
@@ -65,19 +66,17 @@ export function useGitHubAuth() {
   const login = async (): Promise<User | null> => {
     const clientId = window.__GITHUB_CLIENT_ID__;
     if (!clientId || clientId === 'YOUR_GITHUB_CLIENT_ID') {
-      alert('GitHub 登录未配置，请联系管理员');
+      alert('登录功能暂未开放');
       return null;
     }
 
     const redirectUri = `${window.location.origin}/github-callback`;
     const scope = 'read:user user:email';
-    const state = Math.random().toString(36).substring(7);
 
     const authUrl = new URL('https://github.com/login/oauth/authorize');
     authUrl.searchParams.set('client_id', clientId);
     authUrl.searchParams.set('redirect_uri', redirectUri);
     authUrl.searchParams.set('scope', scope);
-    authUrl.searchParams.set('state', state);
 
     const width = 600;
     const height = 700;
@@ -92,7 +91,7 @@ export function useGitHubAuth() {
       );
 
       if (!popup) {
-        alert('弹出窗口被浏览器拦截，请允许弹出窗口后重试');
+        alert('弹出窗口被拦截，请允许弹出窗口后重试');
         resolve(null);
         return;
       }
@@ -143,103 +142,51 @@ export function useGitHubAuth() {
   return { user, loading, login, logout, isAuthenticated: !!user, checkAuth };
 }
 
-export default function GitHubLogin({ onLoginSuccess, onLogout, trigger }: GitHubLoginProps) {
-  const [showModal, setShowModal] = useState(false);
+export default function GitHubLogin({ onLoginSuccess, onLogout, trigger, compact }: GitHubLoginProps) {
   const { user, loading, login, logout, isAuthenticated } = useGitHubAuth();
 
   const handleLogin = async () => {
     const loggedInUser = await login();
     if (loggedInUser) {
       onLoginSuccess?.(loggedInUser);
-      setShowModal(false);
     }
   };
 
   const handleLogout = () => {
     logout();
     onLogout?.();
-    setShowModal(false);
   };
 
   if (loading) {
-    return <div className={styles.loading}>...</div>;
+    return <div className={styles.loading} />;
   }
 
-  const TriggerComponent = trigger || (
-    <button className={styles.loginButton}>
-      {isAuthenticated ? (
-        <span className={styles.userInfo}>
-          <img
-            src={user?.avatarUrl || `https://github.com/${user?.username}.png`}
-            alt={user?.username}
-            className={styles.avatar}
-          />
-          {user?.name || user?.username}
-        </span>
-      ) : (
-        <>🔑 用 GitHub 登录</>
-      )}
+  if (isAuthenticated && user) {
+    return (
+      <div className={styles.loggedInContainer}>
+        <img
+          src={user.avatarUrl || `https://github.com/${user.username}.png`}
+          alt={user.username}
+          className={styles.avatar}
+        />
+        <span className={styles.userName}>{user.name || user.username}</span>
+        {!compact && (
+          <button onClick={handleLogout} className={styles.logoutBtn}>
+            退出
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  const LoginButton = trigger || (
+    <button onClick={handleLogin} className={styles.loginBtn}>
+      <svg height="16" viewBox="0 0 16 16" width="16" fill="currentColor">
+        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+      </svg>
+      使用 GitHub 登录
     </button>
   );
 
-  return (
-    <>
-      <div onClick={() => setShowModal(true)}>
-        {TriggerComponent}
-      </div>
-
-      {showModal && (
-        <div className={styles.overlay} onClick={() => setShowModal(false)}>
-          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.header}>
-              <h2>GitHub 账号登录</h2>
-              <button onClick={() => setShowModal(false)} className={styles.closeBtn}>×</button>
-            </div>
-
-            <div className={styles.content}>
-              {isAuthenticated ? (
-                <div className={styles.loggedIn}>
-                  <img
-                    src={user?.avatarUrl}
-                    alt={user?.username}
-                    className={styles.largeAvatar}
-                  />
-                  <h3>{user?.name || user?.username}</h3>
-                  <p>@{user?.username}</p>
-                  {user?.email && <p className={styles.email}>{user.email}</p>}
-
-                  <div className={styles.actions}>
-                    <button onClick={handleLogout} className={styles.logoutBtn}>
-                      退出登录
-                    </button>
-                  </div>
-
-                  <p className={styles.hint}>
-                    登录后可以发表评论和投稿文章
-                  </p>
-                </div>
-              ) : (
-                <div className={styles.loginPrompt}>
-                  <div className={styles.githubIcon}>
-                    <svg height="64" viewBox="0 0 16 16" width="64">
-                      <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" fill="currentColor"/>
-                    </svg>
-                  </div>
-                  <h3>使用 GitHub 账号登录</h3>
-                  <p>登录后即可发表评论和投稿文章</p>
-
-                  <button onClick={handleLogin} className={styles.githubLoginBtn}>
-                    <svg height="20" viewBox="0 0 16 16" width="20">
-                      <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" fill="currentColor"/>
-                    </svg>
-                    用 GitHub 登录
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-    </>
-  );
+  return <div onClick={handleLogin}>{LoginButton}</div>;
 }

@@ -63,8 +63,8 @@ export default function GitHubCallback() {
       gap: '1rem',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
     }}>
-      <div style={{ fontSize: '2rem' }}>⏳</div>
-      <p style={{ color: '#6b7280', margin: 0 }}>正在完成 GitHub 登录...</p>
+      <div style={{ fontSize: '1.5rem' }}>-</div>
+      <p style={{ color: '#6b7280', margin: 0 }}>正在完成登录...</p>
       <p style={{ color: '#9ca3af', fontSize: '0.88rem', margin: 0 }}>
         如果窗口没有自动关闭，请手动关闭
       </p>

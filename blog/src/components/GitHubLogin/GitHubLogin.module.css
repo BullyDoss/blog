@@ -1,168 +1,41 @@
-.overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.modal {
-  background: white;
-  border-radius: 12px;
-  padding: 2rem;
-  max-width: 420px;
-  width: 90%;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
-}
-
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-}
-
-.header h2 {
-  margin: 0;
-  font-size: 1.5rem;
-  color: #111827;
-}
-
-.closeBtn {
-  background: none;
-  border: none;
-  font-size: 1.75rem;
-  cursor: pointer;
-  color: #9ca3af;
-  padding: 0;
-  line-height: 1;
-}
-
-.closeBtn:hover {
-  color: #374151;
-}
-
-.content {
-  text-align: center;
-}
-
-.loginPrompt,
-.loggedIn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-}
-
-.githubIcon {
-  margin: 1rem 0;
-  color: #181717;
-}
-
-.loginPrompt h3,
-.loggedIn h3 {
-  margin: 0;
-  font-size: 1.25rem;
-  color: #111827;
-}
-
-.loginPrompt p,
-.loggedIn p {
-  margin: 0;
-  color: #6b7280;
-  font-size: 0.95rem;
-}
-
-.email {
-  font-size: 0.85rem !important;
-  color: #9ca3af !important;
-}
-
-.largeAvatar {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  border: 3px solid #e5e7eb;
-}
-
-.actions {
-  display: flex;
-  gap: 0.75rem;
-  margin-top: 0.5rem;
-}
-
-.githubLoginBtn {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.85rem 2rem;
-  background: #181717;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  width: 100%;
-  justify-content: center;
-}
-
-.githubLoginBtn:hover {
-  background: #000;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.logoutBtn {
-  padding: 0.65rem 1.5rem;
+.loading {
+  display: inline-block;
+  width: 100px;
+  height: 36px;
   background: #f3f4f6;
-  color: #374151;
-  border: 1px solid #d1d5db;
   border-radius: 6px;
-  font-size: 0.95rem;
-  cursor: pointer;
-  transition: all 0.2s;
 }
 
-.logoutBtn:hover {
-  background: #e5e7eb;
-}
-
-.hint {
-  margin-top: 1rem !important;
-  padding-top: 1rem;
-  border-top: 1px solid #e5e7eb;
-  font-size: 0.88rem !important;
-  color: #9ca3af !important;
-}
-
-.loginButton {
+.loginBtn {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.6rem 1.25rem;
+  gap: 8px;
+  padding: 10px 20px;
   background: #181717;
   color: white;
   border: none;
   border-radius: 6px;
-  font-size: 0.92rem;
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
-.loginButton:hover {
+.loginBtn:hover {
   background: #000;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
 }
 
-.userInfo {
-  display: flex;
+.loggedInContainer {
+  display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 10px;
+  padding: 6px 14px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
 }
 
 .avatar {
@@ -171,12 +44,32 @@
   border-radius: 50%;
   border: 2px solid #fff;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
 }
 
-.loading {
-  display: inline-block;
-  width: 100px;
-  height: 36px;
+.userName {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.logoutBtn {
+  padding: 5px 12px;
+  background: transparent;
+  color: #6b7280;
+  border: 1px solid #d1d5db;
+  border-radius: 5px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.logoutBtn:hover {
   background: #f3f4f6;
-  border-radius: 6px;
+  color: #374151;
 }

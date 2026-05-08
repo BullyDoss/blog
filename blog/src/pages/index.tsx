@@ -349,14 +349,10 @@ function SubmitFormPanel({ apiBase, onSuccess, isMobile }: { apiBase: string; on
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState('');
   const { user, isAuthenticated } = useGitHubAuth();
-  const [showLoginModal, setShowLoginModal] = React.useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isAuthenticated) {
-      setShowLoginModal(true);
-      return;
-    }
+    if (!isAuthenticated) return;
     if (!title || !content) { setError('请填写标题和内容'); return; }
 
     setSubmitting(true); setError('');
@@ -397,30 +393,13 @@ function SubmitFormPanel({ apiBase, onSuccess, isMobile }: { apiBase: string; on
           borderRadius: 8,
           border: '1px solid #e5e7eb',
         }}>
-          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔒</div>
-          <h3 style={{ margin: '0 0 0.5rem', fontSize: '1.25rem', color: '#111827' }}>
+          <p style={{ margin: '0 0 1.25rem', fontSize: '1rem', color: '#374151', fontWeight: 500 }}>
             需要登录才能投稿
-          </h3>
-          <p style={{ margin: '0 0 1.5rem', color: '#6b7280', fontSize: '0.95rem' }}>
+          </p>
+          <p style={{ margin: '0 0 1.5rem', color: '#6b7280', fontSize: '0.92rem' }}>
             使用 GitHub 账号登录后即可提交文章投稿
           </p>
-          <GitHubLogin
-            onLoginSuccess={() => setShowLoginModal(false)}
-            trigger={
-              <button type="button" style={{
-                padding: '12px 32px',
-                background: '#181717',
-                color: 'white',
-                border: 'none',
-                borderRadius: 8,
-                fontSize: '1rem',
-                fontWeight: 500,
-                cursor: 'pointer',
-              }}>
-                🐙 用 GitHub 登录
-              </button>
-            }
-          />
+          <GitHubLogin />
         </div>
       ) : (
         <form onSubmit={handleSubmit}>
@@ -428,12 +407,12 @@ function SubmitFormPanel({ apiBase, onSuccess, isMobile }: { apiBase: string; on
             <div style={{
               marginBottom: '1.25rem',
               padding: '12px 16px',
-              background: '#f0fdf4',
+              background: '#f9fafb',
               borderRadius: 8,
-              border: '1px solid #bbf7d0',
+              border: '1px solid #e5e7eb',
               display: 'flex',
               alignItems: 'center',
-              gap: '0.75rem',
+              gap: '12px',
             }}>
               <img src={user.avatarUrl} alt={user.username} style={{ width: 36, height: 36, borderRadius: '50%' }} />
               <div>
@@ -465,12 +444,6 @@ function SubmitFormPanel({ apiBase, onSuccess, isMobile }: { apiBase: string; on
           </button>
         </form>
       )}
-
-      {showLoginModal && (
-        <GitHubLogin
-          onLoginSuccess={() => setShowLoginModal(false)}
-        />
-      )}
     </div>
   );
 }
@@ -483,7 +456,6 @@ function ArticleDetail({ post, categories, onBack, apiBase, isMobile }: {
   const [submitting, setSubmitting] = useState(false);
   const [commentsLoading, setCommentsLoading] = useState(true);
   const { user, isAuthenticated } = useGitHubAuth();
-  const [showLoginModal, setShowLoginModal] = useState(false);
 
   useEffect(() => { fetchComments(); }, [post.id]);
 
@@ -501,11 +473,9 @@ function ArticleDetail({ post, categories, onBack, apiBase, isMobile }: {
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isAuthenticated) {
-      setShowLoginModal(true);
-      return;
-    }
     if (!commentContent.trim()) return;
+
+    if (!isAuthenticated) return;
 
     const token = localStorage.getItem('github_auth_token');
     setSubmitting(true);
@@ -578,32 +548,14 @@ function ArticleDetail({ post, categories, onBack, apiBase, isMobile }: {
               border: '1px solid #e5e7eb',
             }}>
               <p style={{ margin: '0 0 1rem', color: '#6b7280', fontSize: '0.92rem' }}>
-                🔒 请先登录后再发表评论
+                请先登录后再发表评论
               </p>
-              <GitHubLogin
-                onLoginSuccess={() => {
-                  setShowLoginModal(false);
-                }}
-                trigger={
-                  <button type="button" style={{
-                    padding: '10px 24px',
-                    background: '#181717',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: 6,
-                    fontSize: '0.95rem',
-                    fontWeight: 500,
-                    cursor: 'pointer',
-                  }}>
-                    🐙 用 GitHub 登录
-                  </button>
-                }
-              />
+              <GitHubLogin />
             </div>
           ) : (
             <>
               {user && (
-                <div style={{ marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{ marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <img src={user.avatarUrl} alt={user.username} style={{ width: 28, height: 28, borderRadius: '50%' }} />
                   <span style={{ fontSize: '0.88rem', color: '#374151', fontWeight: 500 }}>
                     {user.name || user.username}
@@ -616,18 +568,12 @@ function ArticleDetail({ post, categories, onBack, apiBase, isMobile }: {
               </div>
               <button type="submit" disabled={submitting}
                 style={{ padding: isMobile ? '9px 22px' : '10px 28px', background: submitting ? '#9ca3af' : '#111827', color: 'white', border: 'none', borderRadius: 6, fontSize: '0.88rem', fontWeight: 500, cursor: submitting ? 'not-allowed' : 'pointer' }}>
-                {submitting ? '发布中...' : '发布'}
+                {submitting ? '发布中...' : '发布评论'}
               </button>
             </>
           )}
         </form>
       </section>
-
-      {showLoginModal && (
-        <GitHubLogin
-          onLoginSuccess={() => setShowLoginModal(false)}
-        />
-      )}
     </div>
   );
 }
