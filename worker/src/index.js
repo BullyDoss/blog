@@ -39,6 +39,8 @@ function matchRoute(method, pathname) {
     { method: 'DELETE', pattern: /^\/api\/admin\/posts\/(\d+)$/, handler: 'deleteAdminPost', params: ['id'] },
     { method: 'PUT', pattern: /^\/api\/admin\/posts\/(\d+)\/approve$/, handler: 'approvePost', params: ['id'] },
     { method: 'PUT', pattern: /^\/api\/admin\/posts\/(\d+)\/reject$/, handler: 'rejectPost', params: ['id'] },
+    { method: 'GET', pattern: /^\/api\/posts\/([^/]+)\/comments$/, handler: 'getComments', params: ['slug'] },
+    { method: 'POST', pattern: /^\/api\/posts\/(\d+)\/comments$/, handler: 'addComment', params: ['postId'] },
   ];
 
   for (const route of routes) {
@@ -116,6 +118,12 @@ async function handleAPI(request, env) {
 
       case 'rejectPost':
         return verifyToken(request, env).then(() => rejectPost(route.params.id, request, env, corsHeaders));
+
+      case 'getComments':
+        return getComments(route.params.slug, env, corsHeaders);
+
+      case 'addComment':
+        return addComment(route.params.postId, request, env, corsHeaders);
 
       default:
         return jsonResponse({ error: 'Not Found' }, 404, corsHeaders);
@@ -438,6 +446,54 @@ async function rejectPost(id, request, env, headers) {
   ).bind(id).run();
 
   return jsonResponse({ message: '已拒绝', reason }, 200, headers);
+}
+
+// ===================== 评论相关 =====================
+
+async function getComments(slug, env, headers) {
+  try {
+    const post = await env.DB.prepare(
+      'SELECT id FROM posts WHERE slug = ?'
+    ).bind(slug).first();
+
+    if (!post) {
+      return jsonResponse({ comments: [] }, 200, headers);
+    }
+
+    const result = await env.DB.prepare(
+      'SELECT * FROM comments WHERE post_id = ? ORDER BY created_at ASC'
+    ).bind(post.id).all();
+
+    return jsonResponse({ comments: result.results || [] }, 200, headers);
+  } catch (e) {
+    return jsonResponse({ comments: [] }, 200, headers);
+  }
+}
+
+async function addComment(postId, request, env, headers) {
+  try {
+    const body = await request.json();
+    const { author, content } = body;
+
+    if (!author || !content) {
+      return jsonResponse({ error: '请填写昵称和内容' }, 400, headers);
+    }
+
+    const result = await env.DB.prepare(
+      `INSERT INTO comments (post_id, author, content) VALUES (?, ?, ?)`
+    ).bind(postId, author.trim(), content.trim()).run();
+
+    return jsonResponse(
+      { id: result.meta.last_row_id, message: '评论成功' },
+      201,
+      headers
+    );
+  } catch (e) {
+    if (e.message && e.message.includes('no such table')) {
+      return jsonResponse({ error: '评论功能暂未开放' }, 503, headers);
+    }
+    throw e;
+  }
 }
 
 // ===================== 工具函数 =====================
