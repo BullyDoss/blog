@@ -26,8 +26,8 @@ function formatDate(dateStr: string | null | undefined) {
   const diff = now.getTime() - d.getTime();
   if (diff < 60000) return '刚刚';
   if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`;
-  if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`;
-  if (diff < 604800000) return `${Math.floor(diff / 86400000)}天前`;
+  if (diff < 8640000) return `${Math.floor(diff / 3600000)}小时前`;
+  if (diff < 604800000) return `${Math.floor(diff / 8640000)}天前`;
   return `${d.getMonth() + 1}/${d.getDate()}`;
 }
 
@@ -63,12 +63,13 @@ function renderMarkdown(text: string): string {
 
 function BlogLayout() {
   const [activeCategory, setActiveCategory] = useState<string>('notes');
-  const [selectedPostId, setSelectedPostId] = useState<number | null>(null);
+  const [selectedPostSlug, setSelectedPostSlug] = useState<string | null>(null);
   const [showSubmitForm, setShowSubmitForm] = useState<boolean>(false);
   const [allPosts, setAllPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
+  const [fullPostData, setFullPostData] = useState<any>(null);
 
   const getApiBase = () => {
     if (typeof window !== 'undefined' && window.__CONFIG__) {
@@ -83,6 +84,18 @@ function BlogLayout() {
     window.addEventListener('blogSearch', handleSearch);
     return () => window.removeEventListener('blogSearch', handleSearch);
   }, []);
+
+  useEffect(() => {
+    if (selectedPostSlug) {
+      setFullPostData(null);
+      fetch(`${getApiBase()}/api/posts/${selectedPostSlug}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { if (data && data.content) { setFullPostData(data); } })
+        .catch(() => {});
+    } else {
+      setFullPostData(null);
+    }
+  }, [selectedPostSlug]);
 
   const fetchAllPosts = async () => {
     setLoading(true);
@@ -111,16 +124,16 @@ function BlogLayout() {
 
   const currentCategory = CATEGORIES.find(c => c.id === activeCategory);
   const categoryPosts = displayPosts.filter(p => p.category === activeCategory);
-  const selectedPost = allPosts.find(p => p.id === selectedPostId);
+  const selectedPost = fullPostData || allPosts.find(p => p.slug === selectedPostSlug);
 
   const handlePostClick = (post: any) => {
-    setSelectedPostId(post.id);
+    setSelectedPostSlug(post.slug);
     setActiveCategory(post.category);
     setIsMobileSidebarOpen(false);
   };
 
   const handleBackToList = () => {
-    setSelectedPostId(null);
+    setSelectedPostSlug(null);
   };
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
@@ -139,7 +152,7 @@ function BlogLayout() {
           borderRight: isMobile ? 'none' : '1px solid #e5e7eb',
           background: '#fff',
           overflowY: 'auto',
-          height: isMobile ? 'auto' : 'calc(100vh - 110px)',
+          height: isMobile ? 'calc(100vh - 52px)' : 'calc(100vh - 110px)',
           position: isMobile ? 'fixed' : 'relative',
           top: isMobile ? '52px' : 'auto',
           left: isMobile ? 0 : 'auto',
@@ -151,7 +164,7 @@ function BlogLayout() {
           {!isMobile || isMobileSidebarOpen ? (
             <>
               <div style={{
-                padding: '1.25rem 1rem',
+                padding: isMobile ? '0.75rem 1rem' : '1.25rem 1rem',
                 borderBottom: '1px solid #e5e7eb',
                 fontWeight: 600,
                 fontSize: '0.85rem',
@@ -174,7 +187,7 @@ function BlogLayout() {
                   <div style={{ textAlign: 'center', padding: '2rem 1rem', color: '#9ca3af', fontSize: '0.82rem' }}>暂无文章</div>
                 ) : (
                   displayPosts.map((post) => {
-                    const isSelected = post.id === selectedPostId;
+                    const isSelected = post.slug === selectedPostSlug;
                     return (
                       <article key={post.id} onClick={(e) => { e.stopPropagation(); handlePostClick(post); }}
                         style={{
@@ -182,7 +195,7 @@ function BlogLayout() {
                           cursor: 'pointer',
                           borderBottom: '1px solid #f9fafb',
                           transition: 'background 0.15s ease',
-                          background: isSelected ? '#111827' : (post.category === activeCategory && !selectedPostId ? '#f9fafb' : 'transparent'),
+                          background: isSelected ? '#111827' : (post.category === activeCategory && !selectedPostSlug ? '#f9fafb' : 'transparent'),
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '2px' }}>
@@ -195,7 +208,7 @@ function BlogLayout() {
                           </span>
                           <span style={{
                             fontSize: '0.84rem', color: isSelected ? '#fff' : '#374151',
-                            fontWeight: isSelected || (post.category === activeCategory && !selectedPostId) ? 600 : 400,
+                            fontWeight: isSelected || (post.category === activeCategory && !selectedPostSlug) ? 600 : 400,
                             lineHeight: 1.35, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                           }}>{post.title}</span>
                         </div>
@@ -228,7 +241,7 @@ function BlogLayout() {
           <nav style={{
             display: 'flex',
             gap: isMobile ? '1rem' : '2rem',
-            padding: isMobile ? '0 1.25rem' : '0 3rem',
+            padding: isMobile ? '0.625rem 1.25rem' : '1.25rem 3rem',
             borderBottom: '1px solid #e5e7eb',
             background: '#fff',
             position: 'relative',
@@ -243,7 +256,7 @@ function BlogLayout() {
             )}
             {CATEGORIES.map((cat) => (
               <button key={cat.id}
-                onClick={() => { setActiveCategory(cat.id); setSelectedPostId(null); setShowSubmitForm(false); }}
+                onClick={() => { setActiveCategory(cat.id); setSelectedPostSlug(null); setShowSubmitForm(false); }}
                 style={{
                   padding: isMobile ? '0.75rem 0' : '1rem 0',
                   background: 'transparent',
