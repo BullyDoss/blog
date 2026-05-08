@@ -5,6 +5,9 @@ compatibility_date = "2024-01-01"
 [vars]
 ENVIRONMENT = "production"
 CORS_ORIGIN = "https://bullydoss.com"
+# GitHub OAuth 配置 (通过 secrets 设置)
+# wrangler secret put GITHUB_CLIENT_ID
+# wrangler secret put GITHUB_CLIENT_SECRET
 
 [[d1_databases]]
 binding = "DB"

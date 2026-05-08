@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '@theme/Layout';
+import GitHubLogin, { useGitHubAuth } from '../components/GitHubLogin';
 
 export default function HomePage(): React.ReactElement {
   return (
@@ -344,30 +345,40 @@ function BlogLayout() {
 
 function SubmitFormPanel({ apiBase, onSuccess, isMobile }: { apiBase: string; onSuccess: () => void; isMobile: boolean }) {
   const [title, setTitle] = React.useState('');
-  const [author, setAuthor] = React.useState('');
   const [content, setContent] = React.useState('');
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState('');
+  const { user, isAuthenticated } = useGitHubAuth();
+  const [showLoginModal, setShowLoginModal] = React.useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || !author || !content) { setError('请填写所有字段'); return; }
+    if (!isAuthenticated) {
+      setShowLoginModal(true);
+      return;
+    }
+    if (!title || !content) { setError('请填写标题和内容'); return; }
+
     setSubmitting(true); setError('');
     try {
+      const token = localStorage.getItem('github_auth_token');
       const res = await fetch(`${apiBase}/api/submit`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, author, content }),
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ title, content }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || `HTTP ${res.status}`);
       }
-      setTitle(''); setAuthor(''); setContent('');
+      setTitle(''); setContent('');
       alert('投稿成功，等待审核！');
       onSuccess();
     } catch (err: any) {
-      setError(`提交失败: ${err.message}\n\n当前API: ${apiBase}\n请确认Worker已部署且CORS已配置`);
+      setError(`提交失败: ${err.message}`);
     } finally { setSubmitting(false); }
   };
 
@@ -378,30 +389,88 @@ function SubmitFormPanel({ apiBase, onSuccess, isMobile }: { apiBase: string; on
 
       {error && (<div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', padding: '10px 14px', borderRadius: 6, marginBottom: '1rem', fontSize: '0.85rem', lineHeight: 1.6, whiteSpace: 'pre-line' }}>{error}</div>)}
 
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: '1.1rem' }}>
-          <label style={{ display: 'block', fontWeight: 500, fontSize: '0.85rem', color: '#374151', marginBottom: '0.35rem' }}>标题</label>
-          <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="请输入标题" required disabled={submitting}
-            style={{ width: '100%', padding: isMobile ? '10px 12px' : '10px 14px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: '0.92rem', boxSizing: 'border-box', outline: 'none' }} />
+      {!isAuthenticated ? (
+        <div style={{
+          textAlign: 'center',
+          padding: isMobile ? '2rem' : '3rem',
+          background: '#f9fafb',
+          borderRadius: 8,
+          border: '1px solid #e5e7eb',
+        }}>
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔒</div>
+          <h3 style={{ margin: '0 0 0.5rem', fontSize: '1.25rem', color: '#111827' }}>
+            需要登录才能投稿
+          </h3>
+          <p style={{ margin: '0 0 1.5rem', color: '#6b7280', fontSize: '0.95rem' }}>
+            使用 GitHub 账号登录后即可提交文章投稿
+          </p>
+          <GitHubLogin
+            onLoginSuccess={() => setShowLoginModal(false)}
+            trigger={
+              <button type="button" style={{
+                padding: '12px 32px',
+                background: '#181717',
+                color: 'white',
+                border: 'none',
+                borderRadius: 8,
+                fontSize: '1rem',
+                fontWeight: 500,
+                cursor: 'pointer',
+              }}>
+                🐙 用 GitHub 登录
+              </button>
+            }
+          />
         </div>
+      ) : (
+        <form onSubmit={handleSubmit}>
+          {user && (
+            <div style={{
+              marginBottom: '1.25rem',
+              padding: '12px 16px',
+              background: '#f0fdf4',
+              borderRadius: 8,
+              border: '1px solid #bbf7d0',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+            }}>
+              <img src={user.avatarUrl} alt={user.username} style={{ width: 36, height: 36, borderRadius: '50%' }} />
+              <div>
+                <div style={{ fontWeight: 600, fontSize: '0.95rem', color: '#111827' }}>
+                  {user.name || user.username}
+                </div>
+                <div style={{ fontSize: '0.85rem', color: '#6b7280' }}>
+                  @{user.username}
+                </div>
+              </div>
+            </div>
+          )}
 
-        <div style={{ marginBottom: '1.1rem' }}>
-          <label style={{ display: 'block', fontWeight: 500, fontSize: '0.85rem', color: '#374151', marginBottom: '0.35rem' }}>昵称</label>
-          <input type="text" value={author} onChange={(e) => setAuthor(e.target.value)} placeholder="你的昵称" required disabled={submitting}
-            style={{ width: '100%', padding: isMobile ? '10px 12px' : '10px 14px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: '0.92rem', boxSizing: 'border-box', outline: 'none' }} />
-        </div>
+          <div style={{ marginBottom: '1.1rem' }}>
+            <label style={{ display: 'block', fontWeight: 500, fontSize: '0.85rem', color: '#374151', marginBottom: '0.35rem' }}>标题</label>
+            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="请输入标题" required disabled={submitting}
+              style={{ width: '100%', padding: isMobile ? '10px 12px' : '10px 14px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: '0.92rem', boxSizing: 'border-box', outline: 'none' }} />
+          </div>
 
-        <div style={{ marginBottom: '1.4rem' }}>
-          <label style={{ display: 'block', fontWeight: 500, fontSize: '0.85rem', color: '#374151', marginBottom: '0.35rem' }}>正文内容</label>
-          <textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="写下你想分享的内容..." required disabled={submitting} rows={isMobile ? 6 : 8}
-            style={{ width: '100%', padding: isMobile ? '10px 12px' : '10px 14px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: '0.92rem', lineHeight: 1.65, boxSizing: 'border-box', resize: 'vertical', outline: 'none' }} />
-        </div>
+          <div style={{ marginBottom: '1.4rem' }}>
+            <label style={{ display: 'block', fontWeight: 500, fontSize: '0.85rem', color: '#374151', marginBottom: '0.35rem' }}>正文内容</label>
+            <textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="写下你想分享的内容..." required disabled={submitting} rows={isMobile ? 6 : 8}
+              style={{ width: '100%', padding: isMobile ? '10px 12px' : '10px 14px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: '0.92rem', lineHeight: 1.65, boxSizing: 'border-box', resize: 'vertical', outline: 'none' }} />
+          </div>
 
-        <button type="submit" disabled={submitting}
-          style={{ width: '100%', padding: isMobile ? '11px' : '12px', background: submitting ? '#9ca3af' : '#111827', color: 'white', border: 'none', borderRadius: 6, cursor: submitting ? 'not-allowed' : 'pointer', fontWeight: 500, fontSize: '0.95rem' }}>
-          {submitting ? '提交中...' : '提交投稿'}
-        </button>
-      </form>
+          <button type="submit" disabled={submitting}
+            style={{ width: '100%', padding: isMobile ? '11px' : '12px', background: submitting ? '#9ca3af' : '#111827', color: 'white', border: 'none', borderRadius: 6, cursor: submitting ? 'not-allowed' : 'pointer', fontWeight: 500, fontSize: '0.95rem' }}>
+            {submitting ? '提交中...' : '提交投稿'}
+          </button>
+        </form>
+      )}
+
+      {showLoginModal && (
+        <GitHubLogin
+          onLoginSuccess={() => setShowLoginModal(false)}
+        />
+      )}
     </div>
   );
 }
@@ -410,10 +479,11 @@ function ArticleDetail({ post, categories, onBack, apiBase, isMobile }: {
   post: any; categories: typeof CATEGORIES; onBack: () => void; apiBase: string; isMobile: boolean;
 }) {
   const [comments, setComments] = useState<any[]>([]);
-  const [commentName, setCommentName] = useState('');
   const [commentContent, setCommentContent] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [commentsLoading, setCommentsLoading] = useState(true);
+  const { user, isAuthenticated } = useGitHubAuth();
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   useEffect(() => { fetchComments(); }, [post.id]);
 
@@ -431,14 +501,28 @@ function ArticleDetail({ post, categories, onBack, apiBase, isMobile }: {
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!commentName.trim() || !commentContent.trim()) return;
+    if (!isAuthenticated) {
+      setShowLoginModal(true);
+      return;
+    }
+    if (!commentContent.trim()) return;
+
+    const token = localStorage.getItem('github_auth_token');
     setSubmitting(true);
     try {
       const response = await fetch(`${apiBase}/api/posts/${post.id}/comments`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ author: commentName.trim(), content: commentContent.trim() }),
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ content: commentContent.trim() }),
       });
-      if (response.ok) { setCommentName(''); setCommentContent(''); fetchComments(); }
+      if (response.ok) { setCommentContent(''); fetchComments(); }
+      else {
+        const data = await response.json().catch(() => ({}));
+        alert(data.error || '评论失败');
+      }
     } catch (err) { console.error('Failed to submit comment:', err); }
     finally { setSubmitting(false); }
   };
@@ -485,20 +569,65 @@ function ArticleDetail({ post, categories, onBack, apiBase, isMobile }: {
         </div>
 
         <form onSubmit={handleSubmitComment}>
-          <div style={{ marginBottom: '0.65rem' }}>
-            <input type="text" value={commentName} onChange={(e) => setCommentName(e.target.value)} placeholder="昵称" required
-              style={{ width: '100%', maxWidth: isMobile ? '100%' : '240px', padding: '9px 13px', border: '1px solid #e5e7eb', borderRadius: 6, fontSize: '0.88rem', boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit' }} />
-          </div>
-          <div style={{ marginBottom: '0.65rem' }}>
-            <textarea value={commentContent} onChange={(e) => setCommentContent(e.target.value)} placeholder="写下你的想法..." required rows={isMobile ? 3 : 4}
-              style={{ width: '100%', padding: '9px 13px', border: '1px solid #e5e7eb', borderRadius: 6, fontSize: '0.88rem', lineHeight: 1.6, boxSizing: 'border-box', outline: 'none', resize: 'vertical', fontFamily: 'inherit' }} />
-          </div>
-          <button type="submit" disabled={submitting}
-            style={{ padding: isMobile ? '9px 22px' : '10px 28px', background: submitting ? '#9ca3af' : '#111827', color: 'white', border: 'none', borderRadius: 6, fontSize: '0.88rem', fontWeight: 500, cursor: submitting ? 'not-allowed' : 'pointer' }}>
-            {submitting ? '发布中...' : '发布'}
-          </button>
+          {!isAuthenticated ? (
+            <div style={{
+              textAlign: 'center',
+              padding: isMobile ? '1.5rem' : '2rem',
+              background: '#f9fafb',
+              borderRadius: 8,
+              border: '1px solid #e5e7eb',
+            }}>
+              <p style={{ margin: '0 0 1rem', color: '#6b7280', fontSize: '0.92rem' }}>
+                🔒 请先登录后再发表评论
+              </p>
+              <GitHubLogin
+                onLoginSuccess={() => {
+                  setShowLoginModal(false);
+                }}
+                trigger={
+                  <button type="button" style={{
+                    padding: '10px 24px',
+                    background: '#181717',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: 6,
+                    fontSize: '0.95rem',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                  }}>
+                    🐙 用 GitHub 登录
+                  </button>
+                }
+              />
+            </div>
+          ) : (
+            <>
+              {user && (
+                <div style={{ marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <img src={user.avatarUrl} alt={user.username} style={{ width: 28, height: 28, borderRadius: '50%' }} />
+                  <span style={{ fontSize: '0.88rem', color: '#374151', fontWeight: 500 }}>
+                    {user.name || user.username}
+                  </span>
+                </div>
+              )}
+              <div style={{ marginBottom: '0.65rem' }}>
+                <textarea value={commentContent} onChange={(e) => setCommentContent(e.target.value)} placeholder="写下你的想法..." required rows={isMobile ? 3 : 4}
+                  style={{ width: '100%', padding: '9px 13px', border: '1px solid #e5e7eb', borderRadius: 6, fontSize: '0.88rem', lineHeight: 1.6, boxSizing: 'border-box', outline: 'none', resize: 'vertical', fontFamily: 'inherit' }} />
+              </div>
+              <button type="submit" disabled={submitting}
+                style={{ padding: isMobile ? '9px 22px' : '10px 28px', background: submitting ? '#9ca3af' : '#111827', color: 'white', border: 'none', borderRadius: 6, fontSize: '0.88rem', fontWeight: 500, cursor: submitting ? 'not-allowed' : 'pointer' }}>
+                {submitting ? '发布中...' : '发布'}
+              </button>
+            </>
+          )}
         </form>
       </section>
+
+      {showLoginModal && (
+        <GitHubLogin
+          onLoginSuccess={() => setShowLoginModal(false)}
+        />
+      )}
     </div>
   );
 }

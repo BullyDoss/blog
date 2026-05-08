@@ -41,6 +41,8 @@ function matchRoute(method, pathname) {
     { method: 'PUT', pattern: /^\/api\/admin\/posts\/(\d+)\/reject$/, handler: 'rejectPost', params: ['id'] },
     { method: 'GET', pattern: /^\/api\/posts\/([^/]+)\/comments$/, handler: 'getComments', params: ['slug'] },
     { method: 'POST', pattern: /^\/api\/posts\/(\d+)\/comments$/, handler: 'addComment', params: ['postId'] },
+    { method: 'POST', pattern: /^\/api\/auth\/github\/callback$/, handler: 'githubAuthCallback' },
+    { method: 'GET', pattern: /^\/api\/auth\/github\/user$/, handler: 'getGitHubUser' },
   ];
 
   for (const route of routes) {
@@ -125,6 +127,12 @@ async function handleAPI(request, env) {
       case 'addComment':
         return addComment(route.params.postId, request, env, corsHeaders);
 
+      case 'githubAuthCallback':
+        return githubAuthCallback(request, env, corsHeaders);
+
+      case 'getGitHubUser':
+        return getGitHubUser(request, env, corsHeaders);
+
       default:
         return jsonResponse({ error: 'Not Found' }, 404, corsHeaders);
     }
@@ -178,26 +186,35 @@ async function getCategories(headers) {
 }
 
 async function submitPost(request, env, headers) {
-  const body = await request.json();
-  const { title, author, content, email } = body;
+  try {
+    const user = await verifyGitHubToken(request, env);
 
-  if (!title || !author || !content) {
-    return jsonResponse({ error: '请填写必要信息' }, 400, headers);
-  }
+    const body = await request.json();
+    const { title, content } = body;
 
-  const slug = generateSlug(title);
-  const excerpt = content.length > 150 ? content.slice(0, 150) + '...' : content;
+    if (!title || !content) {
+      return jsonResponse({ error: '请填写标题和内容' }, 400, headers);
+    }
 
-  const result = await env.DB.prepare(
-    `INSERT INTO posts (slug, title, content, excerpt, category, status, author, email)
+    const slug = generateSlug(title);
+    const excerpt = content.length > 150 ? content.slice(0, 150) + '...' : content;
+
+    const result = await env.DB.prepare(
+      `INSERT INTO posts (slug, title, content, excerpt, category, status, author, email)
      VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)`
-  ).bind(slug, title, content, excerpt, 'submit', author, email).run();
+    ).bind(slug, title, content, excerpt, 'submit', user.username, user.email || null).run();
 
-  return jsonResponse(
-    { id: result.meta.last_row_id, message: '投稿成功，等待审核' },
-    201,
-    headers
-  );
+    return jsonResponse(
+      { id: result.meta.last_row_id, message: '投稿成功，等待审核' },
+      201,
+      headers
+    );
+  } catch (e) {
+    if (e.message && e.message.includes('认证失败')) {
+      return jsonResponse({ error: '请先登录后再投稿' }, 401, headers);
+    }
+    throw e;
+  }
 }
 
 async function uploadImage(request, env, headers) {
@@ -472,19 +489,21 @@ async function getComments(slug, env, headers) {
 
 async function addComment(postId, request, env, headers) {
   try {
-    const body = await request.json();
-    const { author, content } = body;
+    const user = await verifyGitHubToken(request, env);
 
-    if (!author || !content) {
-      return jsonResponse({ error: '请填写昵称和内容' }, 400, headers);
+    const body = await request.json();
+    const { content } = body;
+
+    if (!content) {
+      return jsonResponse({ error: '请填写评论内容' }, 400, headers);
     }
 
     const result = await env.DB.prepare(
       `INSERT INTO comments (post_id, author, content) VALUES (?, ?, ?)`
-    ).bind(postId, author.trim(), content.trim()).run();
+    ).bind(postId, user.username, content.trim()).run();
 
     return jsonResponse(
-      { id: result.meta.last_row_id, message: '评论成功' },
+      { id: result.meta.last_row_id, message: '评论成功', author: user.username },
       201,
       headers
     );
@@ -492,7 +511,176 @@ async function addComment(postId, request, env, headers) {
     if (e.message && e.message.includes('no such table')) {
       return jsonResponse({ error: '评论功能暂未开放' }, 503, headers);
     }
+    if (e.message && e.message.includes('认证失败')) {
+      return jsonResponse({ error: '请先登录后再评论' }, 401, headers);
+    }
     throw e;
+  }
+}
+
+// ===================== GitHub OAuth 认证相关 =====================
+
+async function githubAuthCallback(request, env, headers) {
+  try {
+    const { code } = await request.json();
+
+    if (!code) {
+      return jsonResponse({ error: '缺少授权码' }, 400, headers);
+    }
+
+    const clientId = env.GITHUB_CLIENT_ID;
+    const clientSecret = env.GITHUB_CLIENT_SECRET;
+
+    if (!clientId || !clientSecret) {
+      return jsonResponse({ error: 'GitHub OAuth 未配置' }, 500, headers);
+    }
+
+    const tokenResponse = await fetch('https://github.com/login/oauth/access_token', {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        client_id: clientId,
+        client_secret: clientSecret,
+        code: code,
+      }),
+    });
+
+    const tokenData = await tokenResponse.json();
+
+    if (tokenData.error) {
+      return jsonResponse({ error: `GitHub 认证失败: ${tokenData.error_description || tokenData.error}` }, 401, headers);
+    }
+
+    const userResponse = await fetch('https://api.github.com/user', {
+      headers: {
+        'Authorization': `Bearer ${tokenData.access_token}`,
+        'User-Agent': 'blog-api',
+      },
+    });
+
+    if (!userResponse.ok) {
+      return jsonResponse({ error: '获取用户信息失败' }, 500, headers);
+    }
+
+    const githubUser = await userResponse.json();
+
+    let dbUser = await env.DB.prepare(
+      'SELECT * FROM github_users WHERE github_id = ?'
+    ).bind(githubUser.id).first();
+
+    if (!dbUser) {
+      const result = await env.DB.prepare(
+        `INSERT INTO github_users (github_id, username, avatar_url, email, name)
+         VALUES (?, ?, ?, ?, ?)`
+      ).bind(
+        githubUser.id,
+        githubUser.login,
+        githubUser.avatar_url,
+        githubUser.email || null,
+        githubUser.name || null
+      ).run();
+
+      dbUser = {
+        id: result.meta.last_row_id,
+        github_id: githubUser.id,
+        username: githubUser.login,
+        avatar_url: githubUser.avatar_url,
+        email: githubUser.email,
+        name: githubUser.name,
+      };
+    } else {
+      await env.DB.prepare(
+        "UPDATE github_users SET last_login = datetime('now'), avatar_url = ?, username = ? WHERE id = ?"
+      ).bind(githubUser.avatar_url, githubUser.login, dbUser.id).run();
+    }
+
+    const jwtToken = await generateJWT(
+      { userId: dbUser.id, githubId: githubUser.id, username: githubUser.login, type: 'github' },
+      env.JWT_SECRET || 'default-secret-change-me'
+    );
+
+    return jsonResponse({
+      token: jwtToken,
+      user: {
+        id: dbUser.id,
+        githubId: githubUser.id,
+        username: githubUser.login,
+        avatarUrl: githubUser.avatar_url,
+        name: githubUser.name,
+        email: githubUser.email,
+      }
+    }, 200, headers);
+
+  } catch (err) {
+    console.error('GitHub Auth Error:', err);
+    return jsonResponse({ error: 'GitHub 登录失败', detail: err.message }, 500, headers);
+  }
+}
+
+async function getGitHubUser(request, env, headers) {
+  try {
+    const payload = await verifyGitHubToken(request, env);
+
+    const user = await env.DB.prepare(
+      'SELECT * FROM github_users WHERE id = ?'
+    ).bind(payload.userId).first();
+
+    if (!user) {
+      return jsonResponse({ error: '用户不存在' }, 404, headers);
+    }
+
+    return jsonResponse({
+      user: {
+        id: user.id,
+        githubId: user.github_id,
+        username: user.username,
+        avatarUrl: user.avatar_url,
+        name: user.name,
+        email: user.email,
+      }
+    }, 200, headers);
+
+  } catch (err) {
+    return jsonResponse({ error: err.message }, 401, headers);
+  }
+}
+
+async function verifyGitHubToken(request, env) {
+  const authHeader = request.headers.get('Authorization');
+  const token = authHeader?.split(' ')[1];
+
+  if (!token) {
+    throw new Error('未提供认证令牌');
+  }
+
+  try {
+    const secret = env.JWT_SECRET || 'default-secret-change-me';
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      throw new Error('令牌格式无效');
+    }
+
+    const payload = JSON.parse(atob(parts[1]));
+
+    if (payload.type !== 'github') {
+      throw new Error('令牌类型无效');
+    }
+
+    const expectedSignature = await generateSignature(parts[0], parts[1], secret);
+    if (parts[2] !== expectedSignature) {
+      throw new Error('令牌签名无效');
+    }
+
+    if (payload.exp < Math.floor(Date.now() / 1000)) {
+      throw new Error('令牌已过期');
+    }
+
+    return payload;
+  } catch (err) {
+    throw new Error(`认证失败: ${err.message}`);
   }
 }
 
