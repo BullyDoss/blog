@@ -64,12 +64,12 @@ export function useGitHubAuth() {
 
   const login = async (): Promise<User | null> => {
     const clientId = window.__GITHUB_CLIENT_ID__;
-    if (!clientId) {
-      alert('GitHub 登录未配置');
+    if (!clientId || clientId === 'YOUR_GITHUB_CLIENT_ID') {
+      alert('GitHub 登录未配置，请联系管理员');
       return null;
     }
 
-    const redirectUri = `${window.location.origin}`;
+    const redirectUri = `${window.location.origin}/github-callback`;
     const scope = 'read:user user:email';
     const state = Math.random().toString(36).substring(7);
 
@@ -79,16 +79,36 @@ export function useGitHubAuth() {
     authUrl.searchParams.set('scope', scope);
     authUrl.searchParams.set('state', state);
 
+    const width = 600;
+    const height = 700;
+    const left = (window.screen.width - width) / 2;
+    const top = (window.screen.height - height) / 2;
+
     return new Promise((resolve) => {
       const popup = window.open(
         authUrl.toString(),
         'github_login',
-        'width=600,height=700,left=100,top=100'
+        `width=${width},height=${height},left=${left},top=${top},resizable,scrollbars,status`
       );
+
+      if (!popup) {
+        alert('弹出窗口被浏览器拦截，请允许弹出窗口后重试');
+        resolve(null);
+        return;
+      }
+
+      const checkClosed = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(checkClosed);
+          window.removeEventListener('message', messageHandler);
+          resolve(null);
+        }
+      }, 1000);
 
       const messageHandler = async (event: MessageEvent) => {
         if (event.data.type !== 'github-auth') return;
 
+        clearInterval(checkClosed);
         window.removeEventListener('message', messageHandler);
         popup?.close();
 
@@ -107,8 +127,9 @@ export function useGitHubAuth() {
       window.addEventListener('message', messageHandler);
 
       setTimeout(() => {
+        clearInterval(checkClosed);
         window.removeEventListener('message', messageHandler);
-        popup?.close();
+        if (!popup.closed) popup.close();
         resolve(null);
       }, 120000);
     });
