@@ -15,3 +15,15 @@ worker/dist/
 # Misc
 .vercel
 .netlify
+
+# Test/Debug files (auto-generated)
+*test*.txt
+*test*.png
+build-log*.txt
+check-post*.txt
+debug-result.txt
+detailed-error.txt
+r2-*.txt
+
+# Docusaurus build cache
+.docusaurus/
