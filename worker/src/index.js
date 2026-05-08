@@ -28,7 +28,7 @@ function matchRoute(method, pathname) {
   const routes = [
     { method: 'GET', pattern: /^\/api\/posts$/, handler: 'getPosts' },
     { method: 'GET', pattern: /^\/api\/posts\/([^/]+)$/, handler: 'getPostBySlug', params: ['slug'] },
-    { method: 'GET', pattern: /^api\/categories$/, handler: 'getCategories' },
+    { method: 'GET', pattern: /^\/api\/categories$/, handler: 'getCategories' },
     { method: 'POST', pattern: /^\/api\/submit$/, handler: 'submitPost' },
     { method: 'POST', pattern: /^\/api\/images\/upload$/, handler: 'uploadImage' },
     { method: 'POST', pattern: /^\/api\/admin\/login$/, handler: 'adminLogin' },
@@ -414,8 +414,8 @@ async function updateAdminPost(id, request, env, headers) {
 
 async function deleteAdminPost(id, env, headers) {
   await env.DB.prepare('DELETE FROM images WHERE post_id = ?').bind(id).run();
-  await env.DB.prepare('DELETE FROM comments WHERE post_id = ?').bind(id).run();
-  await env.DB.prepare('DELETE FROM submissions WHERE post_id = ?').bind(id).run();
+  try { await env.DB.prepare('DELETE FROM comments WHERE post_id = ?').bind(id).run(); } catch (e) {}
+  try { await env.DB.prepare('DELETE FROM submissions WHERE post_id = ?').bind(id).run(); } catch (e) {}
   await env.DB.prepare('DELETE FROM posts WHERE id = ?').bind(id).run();
 
   return jsonResponse({ message: '删除成功' }, 200, headers);
