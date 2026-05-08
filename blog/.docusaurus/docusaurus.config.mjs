@@ -4,17 +4,22 @@
  * Modify the docusaurus.config.js file at your site's root instead.
  */
 export default {
-  "title": "Helloworld的笔记",
-  "tagline": "学习笔记 · 思维风暴 · 生活碎片",
-  "url": "https://c8a118ad.bullydoss.pages.dev",
+  "title": "BullyDoss的不务正业笔记",
+  "tagline": "学习笔记 · 思维风暴 · 夸夸其谈 · 打怪经验",
+  "url": "https://bullydoss.com",
   "baseUrl": "/",
   "onBrokenLinks": "warn",
   "organizationName": "BullyDoss",
   "projectName": "blog",
   "trailingSlash": false,
-  "clientModules": [
-    "C:\\Users\\Doss\\Desktop\\Blog\\blog\\src\\client\\config.js"
+  "scripts": [
+    {
+      "src": "/js/config.js",
+      "async": false,
+      "defer": false
+    }
   ],
+  "clientModules": [],
   "i18n": {
     "defaultLocale": "zh-CN",
     "locales": [
@@ -28,7 +33,7 @@ export default {
     "path": "i18n"
   },
   "customFields": {
-    "apiBaseUrl": "https://blog-api.bullydoss-blog.workers.dev",
+    "apiBaseUrl": "https://api.bullydoss.com",
     "r2BucketUrl": "https://pub-xxxxx.r2.dev"
   },
   "presets": [
@@ -36,14 +41,7 @@ export default {
       "@docusaurus/preset-classic",
       {
         "docs": false,
-        "blog": {
-          "routeBasePath": "/",
-          "blogTitle": "Helloworld的笔记",
-          "blogDescription": "学习笔记 · 思维风暴 · 生活碎片",
-          "postsPerPage": 10,
-          "blogSidebarCount": "ALL",
-          "authorsMapPath": "authors.yml"
-        },
+        "blog": false,
         "theme": {
           "customCss": "C:\\Users\\Doss\\Desktop\\Blog\\blog\\src\\css\\custom.css"
         }
@@ -52,28 +50,23 @@ export default {
   ],
   "themeConfig": {
     "navbar": {
-      "title": "Helloworld的笔记",
+      "title": "BullyDoss的不务正业笔记",
       "logo": {
-        "alt": "Logo",
-        "src": "img/logo.svg"
+        "alt": "BullyDoss",
+        "src": "img/duck.png",
+        "href": "/admin"
       },
-      "items": [
-        {
-          "to": "/",
-          "label": "首页",
-          "position": "left"
-        },
-        {
-          "to": "/admin",
-          "label": "管理后台",
-          "position": "right"
-        }
-      ],
+      "items": [],
       "hideOnScroll": false
+    },
+    "colorMode": {
+      "disableSwitch": true,
+      "respectPrefersColorScheme": false,
+      "defaultMode": "light"
     },
     "footer": {
       "style": "dark",
-      "copyright": "Copyright © 2026 Helloworld的笔记. Built with Docusaurus.",
+      "copyright": "Copyright © 2026 BullyDoss的不务正业笔记. Built with Docusaurus.",
       "links": []
     },
     "prism": {
@@ -97,11 +90,6 @@ export default {
           }
         }
       ]
-    },
-    "colorMode": {
-      "defaultMode": "light",
-      "disableSwitch": false,
-      "respectPrefersColorScheme": false
     },
     "docs": {
       "versionPersistence": "localStorage",
@@ -155,7 +143,6 @@ export default {
   ],
   "plugins": [],
   "themes": [],
-  "scripts": [],
   "headTags": [],
   "stylesheets": [],
   "titleDelimiter": "|",

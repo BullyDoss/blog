@@ -5,9 +5,8 @@ compatibility_date = "2024-01-01"
 [vars]
 ENVIRONMENT = "production"
 CORS_ORIGIN = "https://bullydoss.com"
-# GitHub OAuth 配置 (通过 secrets 设置)
-# wrangler secret put GITHUB_CLIENT_ID
-# wrangler secret put GITHUB_CLIENT_SECRET
+ADMIN_USERNAME = "bully"
+R2_PUBLIC_URL = "https://pub-b0a9b33e21e1f88e68a7285c16cbdec2.r2.dev/blog-images"
 
 [[d1_databases]]
 binding = "DB"
@@ -17,3 +16,13 @@ database_id = "790e82a4-170b-473e-8b0d-09f0f7d3aa04"
 [[r2_buckets]]
 binding = "IMAGES"
 bucket_name = "blog-images"
+
+[triggers]
+crons = ["0 0 * * *"]
+
+[[routes]]
+pattern = "api.bullydoss.com"
+zone_name = "bullydoss.com"
+custom_domain = true
+enabled = true
+previews_enabled = false

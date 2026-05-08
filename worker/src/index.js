@@ -31,6 +31,9 @@ function matchRoute(method, pathname) {
     { method: 'GET', pattern: /^\/api\/categories$/, handler: 'getCategories' },
     { method: 'POST', pattern: /^\/api\/submit$/, handler: 'submitPost' },
     { method: 'POST', pattern: /^\/api\/images\/upload$/, handler: 'uploadImage' },
+    { method: 'GET', pattern: /^\/api\/images\/([^/]+)$/, handler: 'serveImage', params: ['key'] },
+    { method: 'GET', pattern: /^\/api\/debug\/r2$/, handler: 'debugR2' },
+    { method: 'POST', pattern: /^\/api\/debug\/upload-test$/, handler: 'debugUploadTest' },
     { method: 'POST', pattern: /^\/api\/admin\/login$/, handler: 'adminLogin' },
     { method: 'GET', pattern: /^\/api\/admin\/posts$/, handler: 'getAdminPosts' },
     { method: 'GET', pattern: /^\/api\/admin\/posts\/(\d+)$/, handler: 'getAdminPostById', params: ['id'] },
@@ -96,6 +99,15 @@ async function handleAPI(request, env) {
 
       case 'uploadImage':
         return uploadImage(request, env, corsHeaders);
+
+      case 'serveImage':
+        return serveImage(route.params.key, env, corsHeaders);
+
+      case 'debugR2':
+        return debugR2(env, corsHeaders);
+
+      case 'debugUploadTest':
+        return debugUploadTest(request, env, corsHeaders);
 
       case 'adminLogin':
         return adminLogin(request, env, corsHeaders);
@@ -218,31 +230,104 @@ async function submitPost(request, env, headers) {
 }
 
 async function uploadImage(request, env, headers) {
-  const formData = await request.formData();
-  const file = formData.get('image');
+  try {
+    const formData = await request.formData();
+    const file = formData.get('image');
 
-  if (!file || !(file instanceof File)) {
-    return jsonResponse({ error: '请选择图片' }, 400, headers);
+    if (!file || !(file instanceof File)) {
+      return jsonResponse({ error: '请选择图片' }, 400, headers);
+    }
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      return jsonResponse({ error: '仅支持 JPG/PNG/GIF/WebP 格式' }, 400, headers);
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      return jsonResponse({ error: '图片大小不能超过 5MB' }, 400, headers);
+    }
+
+    const ext = file.name.split('.').pop() || 'jpg';
+    const key = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+
+    const arrayBuffer = await file.arrayBuffer();
+    await env.IMAGES.put(key, arrayBuffer, {
+      httpMetadata: { contentType: file.type },
+    });
+
+    const verifyObj = await env.IMAGES.get(key);
+    const url = `https://api.bullydoss.com/api/images/${key}`;
+    return jsonResponse({ url, message: '上传成功', verified: !!verifyObj, size: verifyObj?.size || 0 }, 201, headers);
+  } catch (e) {
+    return jsonResponse({ error: '上传失败: ' + e.message }, 500, headers);
   }
+}
 
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-  if (!allowedTypes.includes(file.type)) {
-    return jsonResponse({ error: '仅支持 JPG/PNG/GIF/WebP 格式' }, 400, headers);
+async function serveImage(key, env, corsHeaders) {
+  try {
+    const object = await env.IMAGES.get(key);
+    if (!object) {
+      const listResult = await (async () => { try { const list = await env.IMAGES.list({ prefix: key.substring(0, 10), limit: 5 }); return list.objects.map(o => o.key); } catch(e) { return 'list_error:' + e.message; } })();
+      return jsonResponse({ error: '图片不存在', requestedKey: key, nearbyKeys: listResult }, 404, corsHeaders);
+    }
+    const imgHeaders = new Headers({
+      'Content-Type': object.httpMetadata?.contentType || 'application/octet-stream',
+      'Cache-Control': 'public, max-age=31536000',
+      'Access-Control-Allow-Origin': '*',
+    });
+    return new Response(object.body, { headers: imgHeaders });
+  } catch (e) {
+    return jsonResponse({ error: '获取图片失败', detail: e.message, stack: e.stack?.substring(0, 200) }, 500, corsHeaders);
   }
+}
 
-  if (file.size > 5 * 1024 * 1024) {
-    return jsonResponse({ error: '图片大小不能超过 5MB' }, 400, headers);
+async function debugR2(env, corsHeaders) {
+  try {
+    const hasBinding = !!env.IMAGES;
+    if (!hasBinding) {
+      return jsonResponse({ error: 'R2 binding (IMAGES) not found!' }, 500, corsHeaders);
+    }
+    const testKey = 'test-r2-check.png';
+    const object = await env.IMAGES.get(testKey);
+    return jsonResponse({
+      r2_bound: true,
+      test_key: testKey,
+      test_object_exists: !!object,
+      test_object_size: object?.size || null,
+      test_object_type: object?.httpMetadata?.contentType || null,
+    }, 200, corsHeaders);
+  } catch (e) {
+    return jsonResponse({ error: e.message }, 500, corsHeaders);
   }
+}
 
-  const ext = file.name.split('.').pop() || 'jpg';
-  const key = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+async function debugUploadTest(request, env, corsHeaders) {
+  try {
+    const formData = await request.formData();
+    const file = formData.get('image');
+    if (!file) return jsonResponse({ error: 'no file' }, 400, corsHeaders);
 
-  await env.IMAGES.put(key, file.stream(), {
-    httpMetadata: { contentType: file.type },
-  });
+    const key = `debug-${Date.now()}.png`;
+    const arrayBuffer = await file.arrayBuffer();
 
-  const url = `${env.R2_PUBLIC_URL}/${key}`;
-  return jsonResponse({ url, message: '上传成功' }, 201, headers);
+    await env.IMAGES.put(key, arrayBuffer, { httpMetadata: { contentType: file.type } });
+
+    const obj = await env.IMAGES.get(key);
+    if (!obj) return jsonResponse({ error: 'put succeeded but get returned null!' }, 500, corsHeaders);
+
+    const imageData = await obj.arrayBuffer();
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(imageData.slice(0, 100))));
+
+    return jsonResponse({
+      upload_ok: true,
+      key: key,
+      size_after_upload: obj.size,
+      preview_base64_prefix: base64.substring(0, 50),
+      r2_binding_works: true,
+    }, 200, corsHeaders);
+  } catch (e) {
+    return jsonResponse({ error: e.message, stack: e.stack }, 500, corsHeaders);
+  }
 }
 
 // ===================== 认证相关 =====================
