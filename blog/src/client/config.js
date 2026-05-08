@@ -1,4 +1,4 @@
-export function onClientExec() {
+if (typeof window !== 'undefined') {
   window.__CONFIG__ = {
     apiBaseUrl: 'https://blog-api.bullydoss-blog.workers.dev',
   };

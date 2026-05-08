@@ -12,9 +12,15 @@ module.exports = {
   projectName: 'blog',
   trailingSlash: false,
 
-  clientModules: [
-    require.resolve('./src/client/config.js'),
+  scripts: [
+    {
+      src: '/js/config.js',
+      async: false,
+      defer: false,
+    },
   ],
+
+  clientModules: [],
 
   i18n: {
     defaultLocale: 'zh-CN',
