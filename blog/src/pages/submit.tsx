@@ -179,7 +179,20 @@ function SubmitPageContent() {
                   color: '#6b7280',
                   fontSize: '0.9rem',
                 }}>
-                  <span>作者: {post.author || '匿名'}</span>
+                  <img
+                    src={post.avatar_url || `https://github.com/${post.author}.png`}
+                    alt={post.author_name || post.author || '匿名'}
+                    style={{
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '50%',
+                      objectFit: 'cover',
+                    }}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                  <span>作者: {post.author_name || post.author || '匿名'}</span>
                   <span>|</span>
                   <span>{new Date(post.created_at).toLocaleDateString('zh-CN')}</span>
                 </div>

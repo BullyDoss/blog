@@ -606,14 +606,40 @@ function ArticleDetail({ post, categories, onBack, apiBase, isMobile }: {
             : comments.length === 0 ? (<div style={{ color: '#9ca3af', fontSize: '0.88rem' }}>暂无评论，快来抢沙发吧</div>)
             : (comments.map((comment) => (
               <div key={comment.id} style={{ display: 'flex', gap: '0.65rem', marginBottom: '1.25rem', paddingBottom: '1.25rem', borderBottom: '1px solid #f3f4f6' }}>
-                <div style={{
-                  width: isMobile ? '30px' : '36px', height: isMobile ? '30px' : '36px', borderRadius: '50%',
-                  background: '#111827', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: isMobile ? '0.78rem' : '0.85rem', fontWeight: 600, flexShrink: 0,
-                }}>{(comment.author || '匿')[0].toUpperCase()}</div>
+                <img
+                  src={comment.avatar_url || `https://github.com/${comment.author}.png`}
+                  alt={comment.author_name || comment.author || '匿名'}
+                  style={{
+                    width: isMobile ? '30px' : '36px',
+                    height: isMobile ? '30px' : '36px',
+                    borderRadius: '50%',
+                    objectFit: 'cover',
+                    flexShrink: 0,
+                  }}
+                  onError={(e) => {
+                    const img = e.target as HTMLImageElement;
+                    img.style.display = 'none';
+                    const fallback = document.createElement('div');
+                    fallback.style.cssText = `
+                      width: ${isMobile ? '30px' : '36px'}px;
+                      height: ${isMobile ? '30px' : '36px'}px;
+                      border-radius: 50%;
+                      background: #111827;
+                      color: #fff;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      font-size: ${isMobile ? '0.78rem' : '0.85rem'};
+                      font-weight: 600;
+                      flex-shrink: 0;
+                    `;
+                    fallback.textContent = (comment.author || '匿')[0].toUpperCase();
+                    img.parentNode?.insertBefore(fallback, img.nextSibling);
+                  }}
+                />
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.65rem', marginBottom: '0.3rem', flexWrap: 'wrap' }}>
-                    <span style={{ fontWeight: 600, fontSize: isMobile ? '0.85rem' : '0.9rem', color: '#111827' }}>{comment.author || '匿名'}</span>
+                    <span style={{ fontWeight: 600, fontSize: isMobile ? '0.85rem' : '0.9rem', color: '#111827' }}>{comment.author_name || comment.author || '匿名'}</span>
                     <span style={{ fontSize: isMobile ? '0.75rem' : '0.8rem', color: '#9ca3af' }}>{formatDate(comment.created_at)}</span>
                   </div>
                   <p style={{ margin: 0, fontSize: isMobile ? '0.86rem' : '0.9rem', color: '#374151', lineHeight: 1.6 }}>{comment.content}</p>
