@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '@theme/Layout';
+import GitHubLogin, { useGitHubAuth } from '../components/GitHubLogin';
 
 export default function SubmitPage(): React.ReactElement {
   return (
@@ -276,14 +277,11 @@ function SubmitPageContent() {
 }
 
 function SubmitForm({ onSuccess }: { onSuccess: () => void }) {
-  const [formData, setFormData] = useState({
-    title: '',
-    author: '',
-    content: '',
-    email: '',
-  });
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [message, setMessage] = useState({ type: '', text: '' });
+  const [error, setError] = useState('');
+  const { user, isAuthenticated } = useGitHubAuth();
 
   const getApiBase = () => {
     if (typeof window !== 'undefined' && window.__CONFIG__) {
@@ -294,32 +292,30 @@ function SubmitForm({ onSuccess }: { onSuccess: () => void }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitting(true);
-    setMessage({ type: '', text: '' });
+    if (!isAuthenticated) return;
+    if (!title || !content) { setError('请填写标题和内容'); return; }
 
+    setSubmitting(true); setError('');
     try {
-      const response = await fetch(`${getApiBase()}/api/submit`, {
+      const token = localStorage.getItem('github_auth_token');
+      const res = await fetch(`${getApiBase()}/api/submit`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ title, content }),
       });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setMessage({ type: 'success', text: '投稿成功！审核通过后将发布。' });
-        setTimeout(() => {
-          onSuccess();
-        }, 1500);
-        setFormData({ title: '', author: '', content: '', email: '' });
-      } else {
-        setMessage({ type: 'error', text: `[ERROR] ${data.error || '投稿失败'}` });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `HTTP ${res.status}`);
       }
-    } catch (err) {
-      setMessage({ type: 'error', text: '[ERROR] 网络错误，请稍后重试' });
-    } finally {
-      setSubmitting(false);
-    }
+      setTitle(''); setContent('');
+      alert('投稿成功，等待审核！');
+      onSuccess();
+    } catch (err: any) {
+      setError(`提交失败: ${err.message}`);
+    } finally { setSubmitting(false); }
   };
 
   return (
@@ -339,7 +335,7 @@ function SubmitForm({ onSuccess }: { onSuccess: () => void }) {
       }}>
         我要投稿
       </h2>
-      
+
       <p style={{
         textAlign: 'center',
         color: '#6b7280',
@@ -349,53 +345,63 @@ function SubmitForm({ onSuccess }: { onSuccess: () => void }) {
         欢迎分享你的想法！投稿内容将在审核后发布到「投稿专区」。
       </p>
 
-      {message.text && (
+      {error && (
         <div style={{
-          background: message.type === 'success' ? '#d1fae5' : '#fef2f2',
-          border: `1px solid ${message.type === 'success' ? '#a7f3d0' : '#fecaca'}`,
-          color: message.type === 'success' ? '#065f46' : '#dc2626',
+          background: '#fef2f2',
+          border: '1px solid #fecaca',
+          color: '#dc2626',
           padding: '12px 16px',
           borderRadius: 6,
           marginBottom: '1.5rem',
           fontSize: '0.9rem',
           lineHeight: 1.6,
         }}>
-          {message.text}
+          {error}
         </div>
       )}
 
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: '1.25rem' }}>
-          <label style={{
-            display: 'block',
-            fontWeight: 500,
-            fontSize: '0.875rem',
-            color: '#374151',
-            marginBottom: '0.5rem',
-          }}>
-            文章标题 *
-          </label>
-          <input
-            type="text"
-            value={formData.title}
-            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-            placeholder="输入一个吸引人的标题"
-            required
-            disabled={submitting}
-            style={{
-              width: '100%',
-              padding: '10px 12px',
-              border: '1px solid #d1d5db',
-              borderRadius: 6,
-              fontSize: '0.95rem',
-              boxSizing: 'border-box',
-              outline: 'none',
-            }}
-          />
+      {!isAuthenticated ? (
+        <div style={{
+          textAlign: 'center',
+          padding: '3rem 2rem',
+          background: '#f9fafb',
+          borderRadius: 8,
+          border: '1px solid #e5e7eb',
+        }}>
+          <p style={{ margin: '0 0 1.25rem', fontSize: '1rem', color: '#374151', fontWeight: 500 }}>
+            需要登录才能投稿
+          </p>
+          <p style={{ margin: '0 0 1.5rem', color: '#6b7280', fontSize: '0.92rem' }}>
+            使用 GitHub 账号登录后即可提交文章投稿
+          </p>
+          <GitHubLogin />
         </div>
+      ) : (
+        <form onSubmit={handleSubmit}>
+          {user && (
+            <div style={{
+              marginBottom: '1.25rem',
+              padding: '12px 16px',
+              background: '#f9fafb',
+              borderRadius: 8,
+              border: '1px solid #e5e7eb',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+            }}>
+              <img src={user.avatarUrl} alt={user.username} style={{ width: 36, height: 36, borderRadius: '50%' }} />
+              <div>
+                <div style={{ fontWeight: 600, fontSize: '0.95rem', color: '#111827' }}>
+                  {user.name || user.username}
+                </div>
+                <div style={{ fontSize: '0.85rem', color: '#6b7280' }}>
+                  @{user.username}
+                </div>
+              </div>
+            </div>
+          )}
 
-        <div style={{ marginBottom: '1.25rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-          <div>
+          <div style={{ marginBottom: '1.25rem' }}>
             <label style={{
               display: 'block',
               fontWeight: 500,
@@ -403,13 +409,13 @@ function SubmitForm({ onSuccess }: { onSuccess: () => void }) {
               color: '#374151',
               marginBottom: '0.5rem',
             }}>
-              你的昵称 *
+              文章标题 *
             </label>
             <input
               type="text"
-              value={formData.author}
-              onChange={(e) => setFormData({ ...formData, author: e.target.value })}
-              placeholder="昵称或笔名"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="输入一个吸引人的标题"
               required
               disabled={submitting}
               style={{
@@ -424,7 +430,7 @@ function SubmitForm({ onSuccess }: { onSuccess: () => void }) {
             />
           </div>
 
-          <div>
+          <div style={{ marginBottom: '1.5rem' }}>
             <label style={{
               display: 'block',
               fontWeight: 500,
@@ -432,13 +438,14 @@ function SubmitForm({ onSuccess }: { onSuccess: () => void }) {
               color: '#374151',
               marginBottom: '0.5rem',
             }}>
-              联系邮箱
+              正文内容 * (支持 Markdown)
             </label>
-            <input
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              placeholder="可选，用于通知审核结果"
+            <textarea
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder="在这里撰写你的文章...&#10;&#10;支持 Markdown 语法：&#10;- **粗体文字**&#10;- *斜体文字*&#10;- # 标题&#10;- 列表项"
+              required
+              rows={12}
               disabled={submitting}
               style={{
                 width: '100%',
@@ -446,78 +453,48 @@ function SubmitForm({ onSuccess }: { onSuccess: () => void }) {
                 border: '1px solid #d1d5db',
                 borderRadius: 6,
                 fontSize: '0.95rem',
+                lineHeight: 1.6,
                 boxSizing: 'border-box',
+                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                resize: 'vertical',
                 outline: 'none',
               }}
             />
           </div>
-        </div>
 
-        <div style={{ marginBottom: '1.5rem' }}>
-          <label style={{
-            display: 'block',
-            fontWeight: 500,
-            fontSize: '0.875rem',
-            color: '#374151',
-            marginBottom: '0.5rem',
-          }}>
-            正文内容 * (支持 Markdown)
-          </label>
-          <textarea
-            id="content"
-            value={formData.content}
-            onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-            required
-            rows={12}
+          <button
+            type="submit"
             disabled={submitting}
-            placeholder="在这里撰写你的文章...&#10;&#10;支持 Markdown 语法：&#10;- **粗体文字**&#10;- *斜体文字*&#10;- # 标题&#10;- 列表项"
             style={{
               width: '100%',
-              padding: '10px 12px',
-              border: '1px solid #d1d5db',
+              padding: '12px',
+              background: submitting ? '#9ca3af' : '#111827',
+              color: 'white',
+              border: 'none',
               borderRadius: 6,
-              fontSize: '0.95rem',
-              lineHeight: 1.6,
-              boxSizing: 'border-box',
-              fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-              resize: 'vertical',
-              outline: 'none',
+              fontSize: '1rem',
+              fontWeight: 500,
+              cursor: submitting ? 'not-allowed' : 'pointer',
+              transition: 'background 0.2s',
             }}
-          />
-        </div>
+          >
+            {submitting ? '提交中...' : '提交投稿'}
+          </button>
 
-        <button
-          type="submit"
-          disabled={submitting}
-          style={{
-            width: '100%',
-            padding: '12px',
-            background: submitting ? '#9ca3af' : '#111827',
-            color: 'white',
-            border: 'none',
+          <p style={{
+            marginTop: '1.25rem',
+            padding: '1rem',
+            background: '#f9fafb',
             borderRadius: 6,
-            fontSize: '1rem',
-            fontWeight: 500,
-            cursor: submitting ? 'not-allowed' : 'pointer',
-            transition: 'background 0.2s',
-          }}
-        >
-          {submitting ? '提交中...' : '提交投稿'}
-        </button>
-
-        <p style={{
-          marginTop: '1.25rem',
-          padding: '1rem',
-          background: '#f9fafb',
-          borderRadius: 6,
-          fontSize: '0.875rem',
-          color: '#4b5563',
-          lineHeight: 1.6,
-          textAlign: 'center',
-        }}>
-          投稿须知：提交的内容将在审核通过后发布，请确保内容原创且符合社区规范。
-        </p>
-      </form>
+            fontSize: '0.875rem',
+            color: '#4b5563',
+            lineHeight: 1.6,
+            textAlign: 'center',
+          }}>
+            投稿须知：提交的内容将在审核通过后发布，请确保内容原创且符合社区规范。
+          </p>
+        </form>
+      )}
     </div>
   );
 }
