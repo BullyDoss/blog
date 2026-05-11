@@ -26,8 +26,8 @@ function formatDate(dateStr: string | null | undefined) {
   const diff = now.getTime() - d.getTime();
   if (diff < 60000) return '刚刚';
   if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`;
-  if (diff < 8640000) return `${Math.floor(diff / 3600000)}小时前`;
-  if (diff < 604800000) return `${Math.floor(diff / 8640000)}天前`;
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`;
+  if (diff < 604800000) return `${Math.floor(diff / 86400000)}天前`;
   return `${d.getMonth() + 1}/${d.getDate()}`;
 }
 
