@@ -27,24 +27,33 @@ export default function GitHubCallback() {
           apiBase = 'https://api.bullydoss.com';
         }
 
+        console.log('[GitHub Callback] API Base:', apiBase);
+        console.log('[GitHub Callback] Code received:', code ? 'YES' : 'NO');
+
         const response = await fetch(`${apiBase}/api/auth/github/callback`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ code }),
         });
 
+        console.log('[GitHub Callback] Response status:', response.status);
+
         if (!response.ok) {
           const data = await response.json().catch(() => ({}));
+          console.error('[GitHub Callback] Error:', data);
           throw new Error(data.error || `HTTP ${response.status}`);
         }
 
         const data = await response.json();
+        console.log('[GitHub Callback] Success, user:', data.user?.username);
+        
         window.opener?.postMessage(
           { type: 'github-auth', token: data.token, user: data.user },
           '*'
         );
         window.close();
       } catch (err: any) {
+        console.error('[GitHub Callback] Exception:', err);
         window.opener?.postMessage({ type: 'github-auth', error: err.message }, '*');
         window.close();
       }

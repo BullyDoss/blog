@@ -605,9 +605,17 @@ function ArticleDetail({ post, categories, onBack, apiBase, isMobile }: {
           {commentsLoading ? (<div style={{ color: '#9ca3af', fontSize: '0.88rem' }}>加载评论中...</div>)
             : comments.length === 0 ? (<div style={{ color: '#9ca3af', fontSize: '0.88rem' }}>暂无评论，快来抢沙发吧</div>)
             : (comments.map((comment) => {
-              const avatarSrc = comment.avatar_url
-                ? `${apiBase}/api/proxy/avatar?url=${encodeURIComponent(comment.avatar_url)}`
-                : `${apiBase}/api/proxy/avatar?url=${encodeURIComponent(`https://github.com/${comment.author}.png`)}`;
+              let avatarSrc;
+              
+              if (comment.avatar_url) {
+                // 优先使用原始URL（直接加载GitHub头像）
+                avatarSrc = comment.avatar_url;
+              } else if (comment.author) {
+                // 降级方案：使用GitHub默认头像
+                avatarSrc = `https://github.com/${comment.author}.png`;
+              } else {
+                avatarSrc = '';
+              }
 
               return (
               <div key={comment.id} style={{ display: 'flex', gap: '0.65rem', marginBottom: '1.25rem', paddingBottom: '1.25rem', borderBottom: '1px solid #f3f4f6' }}>
@@ -623,23 +631,32 @@ function ArticleDetail({ post, categories, onBack, apiBase, isMobile }: {
                   }}
                   onError={(e) => {
                     const img = e.target as HTMLImageElement;
-                    img.style.display = 'none';
-                    const fallback = document.createElement('div');
-                    fallback.style.cssText = `
-                      width: ${isMobile ? '30px' : '36px'}px;
-                      height: ${isMobile ? '30px' : '36px'}px;
-                      border-radius: 50%;
-                      background: #111827;
-                      color: #fff;
-                      display: flex;
-                      align-items: center;
-                      justify-content: center;
-                      font-size: ${isMobile ? '0.78rem' : '0.85rem'};
-                      font-weight: 600;
-                      flex-shrink: 0;
-                    `;
-                    fallback.textContent = (comment.author || '匿')[0].toUpperCase();
-                    img.parentNode?.insertBefore(fallback, img.nextSibling);
+                    // 如果直接加载失败，尝试使用代理
+                    if (!img.src.includes('/api/proxy/')) {
+                      const proxyUrl = comment.avatar_url
+                        ? `${apiBase}/api/proxy/avatar?url=${encodeURIComponent(comment.avatar_url)}`
+                        : `${apiBase}/api/proxy/avatar?url=${encodeURIComponent(`https://github.com/${comment.author}.png`)}`;
+                      img.src = proxyUrl;
+                    } else {
+                      // 代理也失败，显示首字母
+                      img.style.display = 'none';
+                      const fallback = document.createElement('div');
+                      fallback.style.cssText = `
+                        width: ${isMobile ? '30px' : '36px'}px;
+                        height: ${isMobile ? '30px' : '36px'}px;
+                        border-radius: 50%;
+                        background: #111827;
+                        color: #fff;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: ${isMobile ? '0.78rem' : '0.85rem'};
+                        font-weight: 600;
+                        flex-shrink: 0;
+                      `;
+                      fallback.textContent = (comment.author || '匿')[0].toUpperCase();
+                      img.parentNode?.insertBefore(fallback, img.nextSibling);
+                    }
                   }}
                 />
                 <div style={{ flex: 1 }}>
