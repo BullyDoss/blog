@@ -162,12 +162,42 @@ export default function GitHubLogin({ onLoginSuccess, onLogout, trigger, compact
   }
 
   if (isAuthenticated && user) {
+    const avatarSrc = user.avatarUrl || `https://github.com/${user.username}.png`;
+
     return (
       <div className={styles.loggedInContainer}>
         <img
-          src={user.avatarUrl || `https://github.com/${user.username}.png`}
+          src={avatarSrc}
           alt={user.username}
           className={styles.avatar}
+          onError={(e) => {
+            const img = e.target as HTMLImageElement;
+            // 如果直接加载失败，尝试使用代理
+            if (!img.src.includes('/api/proxy/')) {
+              const apiBase = typeof window !== 'undefined' && window.__CONFIG__
+                ? (window.__CONFIG__.apiBaseUrl || 'https://api.bullydoss.com')
+                : 'https://api.bullydoss.com';
+              img.src = `${apiBase}/api/proxy/avatar?url=${encodeURIComponent(avatarSrc)}`;
+            } else {
+              // 代理也失败，显示首字母
+              img.style.display = 'none';
+              const fallback = document.createElement('div');
+              fallback.style.cssText = `
+                width: 36px;
+                height: 36px;
+                border-radius: 50%;
+                background: #111827;
+                color: #fff;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 14px;
+                font-weight: 600;
+              `;
+              fallback.textContent = (user.name || user.username || 'U')[0].toUpperCase();
+              img.parentNode?.insertBefore(fallback, img.nextSibling);
+            }
+          }}
         />
         <span className={styles.userName}>{user.name || user.username}</span>
         {!compact && (
