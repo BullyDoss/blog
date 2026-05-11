@@ -179,7 +179,7 @@ function AdminPanel({ token, onLogout, apiBase }: { token: string; onLogout: () 
           : (
             <>
               <AllPostsManager token={token} apiBase={apiBase} onEdit={handleEditPost} />
-              <SubmissionsManager token={token} apiBase={apiBase} />
+              <SubmissionsManager token={token} apiBase={apiBase} onViewSubmission={handleEditPost} />
             </>
           )}
       </div>
@@ -362,9 +362,10 @@ function PostEditor({ token, apiBase, post, onSave, onCancel }: { token: string;
   );
 }
 
-function SubmissionsManager({ token, apiBase }: { token: string; apiBase: string }) {
+function SubmissionsManager({ token, apiBase, onViewSubmission }: { token: string; apiBase: string; onViewSubmission: (post: any) => void }) {
   const [submissions, setSubmissions] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [isVisible, setIsVisible] = React.useState(true);
   const isMobile = useMediaQuery(768);
 
   const safeFetch = async (url: string, options?: RequestInit) => {
@@ -379,24 +380,30 @@ function SubmissionsManager({ token, apiBase }: { token: string; apiBase: string
   const fetchSubmissions = async () => { setLoading(true); try { const res = await safeFetch(`${apiBase}/api/admin/posts?category=submit&status=pending`); const data = await res.json(); setSubmissions(data.filter((p: any) => p.status === 'pending')); } catch (err) { console.error('[Admin]', err); } finally { setLoading(false); } };
   React.useEffect(() => { fetchSubmissions(); }, [token]);
 
-  const approvePost = async (postId: number) => { if (!confirm('确定批准？')) return; try { await safeFetch(`${apiBase}/api/admin/posts/${postId}/approve`, { method: 'PUT' }); setSubmissions(submissions.filter(s => s.id !== postId)); } catch (err: any) { alert(`失败: ${err.message}`); } };
-  const rejectPost = async (postId: number) => { if (!confirm('确定拒绝？')) return; try { await safeFetch(`${apiBase}/api/admin/posts/${postId}/reject`, { method: 'PUT' }); setSubmissions(submissions.filter(s => s.id !== postId)); } catch (err: any) { alert(`失败: ${err.message}`); } };
+  const handleClose = () => setIsVisible(false);
+  const handleViewSubmission = (sub: any) => {
+    onViewSubmission(sub);
+    setIsVisible(false);
+  };
 
-  if (loading || submissions.length === 0) return null;
+  if (loading || submissions.length === 0 || !isVisible) return null;
 
   return (
     <div>
-      <h2 style={{ margin: '2rem 0 1rem', color: '#111827', fontSize: isMobile ? '0.95rem' : '1rem', fontWeight: 600 }}>待审核投稿 ({submissions.length})</h2>
+      <h2 style={{ margin: '2rem 0 1rem', color: '#111827', fontSize: isMobile ? '0.95rem' : '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        新投稿通知 ({submissions.length})
+        <span style={{ fontSize: '0.75rem', color: '#9ca3af', fontWeight: 400 }}>点击"查看投稿"进行编辑发布或删除</span>
+      </h2>
       <div style={{ display: 'grid', gap: '0.65rem' }}>
         {submissions.map((sub) => (
           <div key={sub.id} style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? '0.5rem' : '1rem', padding: isMobile ? '0.75rem' : '0.85rem 1rem', borderBottom: '1px solid #f3f4f6', borderRadius: 8, background: isMobile ? '#fafafa' : 'transparent' }}>
-            <div>
-              <div style={{ fontWeight: 600, color: '#111827', fontSize: isMobile ? '0.88rem' : '0.9rem', marginBottom: '0.15rem' }}>{sub.title}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 600, color: '#111827', fontSize: isMobile ? '0.88rem' : '0.9rem', marginBottom: '0.15rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub.title}</div>
               <div style={{ color: '#9ca3af', fontSize: isMobile ? '0.78rem' : '0.82rem' }}>作者: {sub.author || '匿名'} | {formatDate(sub.created_at)}</div>
             </div>
             <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
-              <button onClick={() => approvePost(sub.id)} style={{ padding: isMobile ? '5px 14px' : '5px 18px', background: '#111827', color: 'white', border: 'none', borderRadius: 5, cursor: 'pointer', fontSize: isMobile ? '0.8rem' : '0.83rem', fontWeight: 500 }}>批准</button>
-              <button onClick={() => rejectPost(sub.id)} style={{ padding: isMobile ? '5px 14px' : '5px 18px', background: '#fff', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 5, cursor: 'pointer', fontSize: isMobile ? '0.8rem' : '0.83rem', fontWeight: 500 }}>拒绝</button>
+              <button onClick={() => handleViewSubmission(sub)} style={{ padding: isMobile ? '5px 14px' : '5px 18px', background: '#111827', color: 'white', border: 'none', borderRadius: 5, cursor: 'pointer', fontSize: isMobile ? '0.8rem' : '0.83rem', fontWeight: 500 }}>查看投稿</button>
+              <button onClick={handleClose} style={{ padding: isMobile ? '5px 14px' : '5px 18px', background: '#fff', color: '#6b7280', border: '1px solid #d1d5db', borderRadius: 5, cursor: 'pointer', fontSize: isMobile ? '0.8rem' : '0.83rem', fontWeight: 500 }}>关闭</button>
             </div>
           </div>
         ))}
