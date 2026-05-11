@@ -499,7 +499,7 @@ function SubmitFormPanel({ apiBase, onSuccess, isMobile }: { apiBase: string; on
               alignItems: 'center',
               gap: '12px',
             }}>
-              <img src={user.avatarUrl} alt={user.username} style={{ width: 36, height: 36, borderRadius: '50%' }} />
+              <img src={`${apiBase}/api/proxy/avatar?url=${encodeURIComponent(user.avatarUrl)}`} alt={user.username} style={{ width: 36, height: 36, borderRadius: '50%' }} />
               <div>
                 <div style={{ fontWeight: 600, fontSize: '0.95rem', color: '#111827' }}>
                   {user.name || user.username}
@@ -604,10 +604,15 @@ function ArticleDetail({ post, categories, onBack, apiBase, isMobile }: {
         <div style={{ marginBottom: isMobile ? '1.5rem' : '2rem' }}>
           {commentsLoading ? (<div style={{ color: '#9ca3af', fontSize: '0.88rem' }}>加载评论中...</div>)
             : comments.length === 0 ? (<div style={{ color: '#9ca3af', fontSize: '0.88rem' }}>暂无评论，快来抢沙发吧</div>)
-            : (comments.map((comment) => (
+            : (comments.map((comment) => {
+              const avatarSrc = comment.avatar_url
+                ? `${apiBase}/api/proxy/avatar?url=${encodeURIComponent(comment.avatar_url)}`
+                : `${apiBase}/api/proxy/avatar?url=${encodeURIComponent(`https://github.com/${comment.author}.png`)}`;
+
+              return (
               <div key={comment.id} style={{ display: 'flex', gap: '0.65rem', marginBottom: '1.25rem', paddingBottom: '1.25rem', borderBottom: '1px solid #f3f4f6' }}>
                 <img
-                  src={comment.avatar_url || `https://github.com/${comment.author}.png`}
+                  src={avatarSrc}
                   alt={comment.author_name || comment.author || '匿名'}
                   style={{
                     width: isMobile ? '30px' : '36px',
@@ -645,7 +650,8 @@ function ArticleDetail({ post, categories, onBack, apiBase, isMobile }: {
                   <p style={{ margin: 0, fontSize: isMobile ? '0.86rem' : '0.9rem', color: '#374151', lineHeight: 1.6 }}>{comment.content}</p>
                 </div>
               </div>
-            ))
+              );
+            })
           )}
         </div>
 
@@ -667,7 +673,7 @@ function ArticleDetail({ post, categories, onBack, apiBase, isMobile }: {
             <>
               {user && (
                 <div style={{ marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <img src={user.avatarUrl} alt={user.username} style={{ width: 28, height: 28, borderRadius: '50%' }} />
+                  <img src={`${apiBase}/api/proxy/avatar?url=${encodeURIComponent(user.avatarUrl)}`} alt={user.username} style={{ width: 28, height: 28, borderRadius: '50%' }} />
                   <span style={{ fontSize: '0.88rem', color: '#374151', fontWeight: 500 }}>
                     {user.name || user.username}
                   </span>
