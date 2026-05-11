@@ -286,9 +286,12 @@ function PostEditor({ token, apiBase, post, onSave, onCancel }: { token: string;
     try {
       const payload = { ...formData }; delete (payload as any).created_at;
       if (formData.created_at) payload.created_at = new Date(formData.created_at).toISOString();
+      if (post && post.status === 'pending') {
+        payload.status = 'published';
+      }
       if (post) await safeFetch(`${apiBase}/api/admin/posts/${post.id}`, { method: 'PUT', body: JSON.stringify(payload) });
       else await safeFetch(`${apiBase}/api/admin/posts`, { method: 'POST', body: JSON.stringify(payload) });
-      alert(post ? '更新成功' : '创建成功'); onSave();
+      alert(post ? (post.status === 'pending' ? '投稿已发布成功！' : '更新成功') : '创建成功'); onSave();
     } catch (err: any) { setError(err.message); } finally { setSaving(false); }
   };
 
@@ -365,7 +368,13 @@ function PostEditor({ token, apiBase, post, onSave, onCancel }: { token: string;
 function SubmissionsManager({ token, apiBase, onViewSubmission }: { token: string; apiBase: string; onViewSubmission: (post: any) => void }) {
   const [submissions, setSubmissions] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
-  const [isVisible, setIsVisible] = React.useState(true);
+  const [dismissedIds, setDismissedIds] = React.useState<Set<number>>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('dismissed_submissions');
+      if (stored) return new Set(JSON.parse(stored));
+    }
+    return new Set();
+  });
   const isMobile = useMediaQuery(768);
 
   const safeFetch = async (url: string, options?: RequestInit) => {
@@ -380,22 +389,39 @@ function SubmissionsManager({ token, apiBase, onViewSubmission }: { token: strin
   const fetchSubmissions = async () => { setLoading(true); try { const res = await safeFetch(`${apiBase}/api/admin/posts?category=submit&status=pending`); const data = await res.json(); setSubmissions(data.filter((p: any) => p.status === 'pending')); } catch (err) { console.error('[Admin]', err); } finally { setLoading(false); } };
   React.useEffect(() => { fetchSubmissions(); }, [token]);
 
-  const handleClose = () => setIsVisible(false);
-  const handleViewSubmission = (sub: any) => {
-    onViewSubmission(sub);
-    setIsVisible(false);
+  const handleCloseSingle = (postId: number) => {
+    const newDismissed = new Set(dismissedIds);
+    newDismissed.add(postId);
+    setDismissedIds(newDismissed);
+    localStorage.setItem('dismissed_submissions', JSON.stringify([...newDismissed]));
   };
 
-  if (loading || submissions.length === 0 || !isVisible) return null;
+  const handleCloseAll = () => {
+    const allIds = submissions.map(s => s.id);
+    const newDismissed = new Set([...dismissedIds, ...allIds]);
+    setDismissedIds(newDismissed);
+    localStorage.setItem('dismissed_submissions', JSON.stringify([...newDismissed]));
+  };
+
+  const handleViewSubmission = (sub: any) => {
+    onViewSubmission(sub);
+  };
+
+  const visibleSubmissions = submissions.filter(sub => !dismissedIds.has(sub.id));
+
+  if (loading || visibleSubmissions.length === 0) return null;
 
   return (
     <div>
-      <h2 style={{ margin: '2rem 0 1rem', color: '#111827', fontSize: isMobile ? '0.95rem' : '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        新投稿通知 ({submissions.length})
-        <span style={{ fontSize: '0.75rem', color: '#9ca3af', fontWeight: 400 }}>点击"查看投稿"进行编辑发布或删除</span>
+      <h2 style={{ margin: '2rem 0 1rem', color: '#111827', fontSize: isMobile ? '0.95rem' : '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+        <span>
+          新投稿通知 ({visibleSubmissions.length})
+          <span style={{ fontSize: '0.75rem', color: '#9ca3af', fontWeight: 400, marginLeft: '0.5rem' }}>点击"查看投稿"进行编辑发布或删除</span>
+        </span>
+        <button onClick={handleCloseAll} style={{ padding: '4px 12px', background: '#f3f4f6', color: '#6b7280', border: '1px solid #d1d5db', borderRadius: 5, cursor: 'pointer', fontSize: '0.75rem', fontWeight: 500 }}>全部关闭</button>
       </h2>
       <div style={{ display: 'grid', gap: '0.65rem' }}>
-        {submissions.map((sub) => (
+        {visibleSubmissions.map((sub) => (
           <div key={sub.id} style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? '0.5rem' : '1rem', padding: isMobile ? '0.75rem' : '0.85rem 1rem', borderBottom: '1px solid #f3f4f6', borderRadius: 8, background: isMobile ? '#fafafa' : 'transparent' }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontWeight: 600, color: '#111827', fontSize: isMobile ? '0.88rem' : '0.9rem', marginBottom: '0.15rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub.title}</div>
@@ -403,7 +429,7 @@ function SubmissionsManager({ token, apiBase, onViewSubmission }: { token: strin
             </div>
             <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
               <button onClick={() => handleViewSubmission(sub)} style={{ padding: isMobile ? '5px 14px' : '5px 18px', background: '#111827', color: 'white', border: 'none', borderRadius: 5, cursor: 'pointer', fontSize: isMobile ? '0.8rem' : '0.83rem', fontWeight: 500 }}>查看投稿</button>
-              <button onClick={handleClose} style={{ padding: isMobile ? '5px 14px' : '5px 18px', background: '#fff', color: '#6b7280', border: '1px solid #d1d5db', borderRadius: 5, cursor: 'pointer', fontSize: isMobile ? '0.8rem' : '0.83rem', fontWeight: 500 }}>关闭</button>
+              <button onClick={() => handleCloseSingle(sub.id)} style={{ padding: isMobile ? '5px 14px' : '5px 18px', background: '#fff', color: '#6b7280', border: '1px solid #d1d5db', borderRadius: 5, cursor: 'pointer', fontSize: isMobile ? '0.8rem' : '0.83rem', fontWeight: 500 }}>关闭</button>
             </div>
           </div>
         ))}
