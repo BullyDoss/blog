@@ -255,6 +255,7 @@ function BlogLayout() {
                 ) : (
                   filteredSidebarPosts.map((post) => {
                     const isSelected = post.slug === selectedPostSlug;
+                    const isPinned = post.is_pinned === 1 || post.is_pinned === true;
                     return (
                       <article key={post.id} onClick={(e) => { e.stopPropagation(); handlePostClick(post); }}
                         style={{
@@ -262,20 +263,20 @@ function BlogLayout() {
                           cursor: 'pointer',
                           borderBottom: '1px solid #f9fafb',
                           transition: 'background 0.15s ease',
-                          background: isSelected ? '#111827' : (post.category === activeCategory && !selectedPostSlug ? '#f9fafb' : 'transparent'),
+                          background: isSelected ? '#111827' : (isPinned ? '#fffbeb' : (post.category === activeCategory && !selectedPostSlug ? '#f9fafb' : 'transparent')),
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '2px' }}>
                           <span style={{
-                            display: 'inline-block', padding: '1px 5px', background: isSelected ? 'rgba(255,255,255,0.15)' : '#f3f4f6',
-                            color: isSelected ? '#d1d5db' : '#6b7280', borderRadius: 3, fontSize: '0.68rem',
+                            display: 'inline-block', padding: '1px 5px', background: isSelected ? 'rgba(255,255,255,0.15)' : (isPinned ? '#fef3c7' : '#f3f4f6'),
+                            color: isSelected ? '#d1d5db' : (isPinned ? '#d97706' : '#6b7280'), borderRadius: 3, fontSize: '0.68rem',
                             fontWeight: 500, whiteSpace: 'nowrap', flexShrink: 0, marginTop: '2px',
                           }}>
-                            {CATEGORIES.find(c => c.id === post.category)?.label || post.category}
+                            {isPinned ? '📌 置顶' : (CATEGORIES.find(c => c.id === post.category)?.label || post.category)}
                           </span>
                           <span style={{
                             fontSize: '0.84rem', color: isSelected ? '#fff' : '#374151',
-                            fontWeight: isSelected || (post.category === activeCategory && !selectedPostSlug) ? 600 : 400,
+                            fontWeight: isSelected || isPinned || (post.category === activeCategory && !selectedPostSlug) ? 600 : 400,
                             lineHeight: 1.35, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                           }}>{post.title}</span>
                         </div>

@@ -192,6 +192,7 @@ function AllPostsManager({ token, apiBase, onEdit }: { token: string; apiBase: s
   const [loading, setLoading] = React.useState(true);
   const [errorMsg, setErrorMsg] = React.useState('');
   const [deletingId, setDeletingId] = React.useState<number | null>(null);
+  const [pinningId, setPinningId] = React.useState<number | null>(null);
   const isMobile = useMediaQuery(768);
 
   const safeFetch = async (url: string, options?: RequestInit) => {
@@ -214,6 +215,26 @@ function AllPostsManager({ token, apiBase, onEdit }: { token: string; apiBase: s
 
   const deletePost = async (postId: number) => { if (!confirm('确定删除？')) return; setDeletingId(postId); try { await safeFetch(`${apiBase}/api/admin/posts/${postId}`, { method: 'DELETE' }); setPosts(posts.filter(p => p.id !== postId)); } catch (err: any) { alert(err.message); } finally { setDeletingId(null); } };
 
+  const togglePin = async (post: any) => {
+    const postId = post.id;
+    const isCurrentlyPinned = post.is_pinned === 1 || post.is_pinned === true;
+    
+    setPinningId(postId);
+    try {
+      if (isCurrentlyPinned) {
+        await safeFetch(`${apiBase}/api/admin/posts/${postId}/unpin`, { method: 'PUT' });
+        setPosts(posts.map(p => p.id === postId ? { ...p, is_pinned: 0 } : p));
+      } else {
+        await safeFetch(`${apiBase}/api/admin/posts/${postId}/pin`, { method: 'PUT' });
+        setPosts(posts.map(p => p.id === postId ? { ...p, is_pinned: 1 } : p));
+      }
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setPinningId(null);
+    }
+  };
+
   if (loading) return <div style={{ textAlign: 'center', padding: '3rem', color: '#9ca3af' }}>加载中...</div>;
 
   return (
@@ -230,19 +251,26 @@ function AllPostsManager({ token, apiBase, onEdit }: { token: string; apiBase: s
               <th style={{ padding: isMobile ? '10px 12px' : '12px 18px', textAlign: 'right', fontWeight: 600, fontSize: isMobile ? '0.82rem' : '0.87rem', color: '#374151', borderBottom: '2px solid #e5e7eb' }}>操作</th>
             </tr>
           </thead>
-          <tbody>{posts.map((post) => (
-            <tr key={post.id} style={{ borderBottom: '1px solid #f3f4f6' }} onMouseEnter={(e) => (e.currentTarget as HTMLTableRowElement).style.background = '#f9fafb'} onMouseLeave={(e) => (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'}>
-              <td style={{ padding: isMobile ? '11px 12px' : '13px 18px', color: '#111827', fontSize: isMobile ? '0.85rem' : '0.9rem', fontWeight: 500 }}>{post.title}</td>
+          <tbody>{posts.map((post) => {
+            const isPinned = post.is_pinned === 1 || post.is_pinned === true;
+            return (
+            <tr key={post.id} style={{ borderBottom: '1px solid #f3f4f6', background: isPinned ? '#fffbeb' : undefined }} onMouseEnter={(e) => (e.currentTarget as HTMLTableRowElement).style.background = isPinned ? '#fef3c7' : '#f9fafb'} onMouseLeave={(e) => (e.currentTarget as HTMLTableRowElement).style.background = isPinned ? '#fffbeb' : 'transparent'}>
+              <td style={{ padding: isMobile ? '11px 12px' : '13px 18px', color: '#111827', fontSize: isMobile ? '0.85rem' : '0.9rem', fontWeight: 500 }}>
+                {isPinned && <span style={{ marginRight: '0.5rem' }}>📌</span>}
+                {post.title}
+              </td>
               {!isMobile && <td style={{ padding: '13px 18px', color: '#6b7280', fontSize: '0.86rem' }}><span style={{ display: 'inline-block', padding: '2px 8px', background: '#f3f4f6', borderRadius: 4, fontSize: '0.8rem' }}>{CATEGORIES.find(c => c.id === post.category)?.label || post.category}</span></td>}
               <td style={{ padding: isMobile ? '11px 12px' : '13px 18px', color: '#6b7280', fontSize: isMobile ? '0.82rem' : '0.86rem' }}>{formatDate(post.created_at)}</td>
               <td style={{ padding: isMobile ? '11px 12px' : '13px 18px', textAlign: 'right' }}>
                 <span style={{ display: 'inline-flex', gap: isMobile ? '0.5rem' : '0.75rem', alignItems: 'center' }}>
+                  <button onClick={() => togglePin(post)} disabled={pinningId === post.id} title={isPinned ? '取消置顶' : '置顶文章'} style={{ padding: isMobile ? '4px 10px' : '5px 14px', background: isPinned ? '#f59e0b' : 'transparent', color: isPinned ? 'white' : '#f59e0b', border: isPinned ? 'none' : '1px solid #f59e0b', borderRadius: 5, cursor: pinningId === post.id ? 'not-allowed' : 'pointer', fontSize: isMobile ? '0.8rem' : '0.84rem', fontWeight: 500, transition: 'all 0.2s' }}>{pinningId === post.id ? '...' : (isPinned ? '📌 已置顶' : '📌 置顶')}</button>
                   <button onClick={() => onEdit(post)} style={{ padding: isMobile ? '4px 12px' : '5px 16px', background: '#111827', color: 'white', border: 'none', borderRadius: 5, cursor: 'pointer', fontSize: isMobile ? '0.8rem' : '0.84rem', fontWeight: 500 }}>编辑</button>
                   <button onClick={() => deletePost(post.id)} disabled={deletingId === post.id} style={{ padding: isMobile ? '4px 8px' : '5px 12px', background: 'transparent', color: deletingId === post.id ? '#d1d5db' : '#ef4444', border: deletingId === post.id ? '1px solid #e5e7eb' : '1px solid transparent', borderRadius: 5, cursor: deletingId === post.id ? 'not-allowed' : 'pointer', fontSize: isMobile ? '0.8rem' : '0.84rem', fontWeight: 500 }}>{deletingId === post.id ? '...' : '删除'}</button>
                 </span>
               </td>
             </tr>
-          ))}</tbody>
+            );
+          })}</tbody>
         </table>
       </div>
 
