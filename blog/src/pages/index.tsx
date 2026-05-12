@@ -500,23 +500,39 @@ function SubmitFormPanel({ apiBase, onSuccess, isMobile }: { apiBase: string; on
               alignItems: 'center',
               gap: '12px',
             }}>
-              <img
-                src={user.avatarUrl || `https://github.com/${user.username}.png`}
-                alt={user.username}
-                style={{ width: 36, height: 36, borderRadius: '50%' }}
-                onError={(e) => {
-                  const img = e.target as HTMLImageElement;
-                  if (!img.src.includes('/api/proxy/')) {
-                    img.src = `${apiBase}/api/proxy/avatar?url=${encodeURIComponent(user.avatarUrl || `https://github.com/${user.username}.png`)}`;
-                  } else {
-                    img.style.display = 'none';
-                    const fallback = document.createElement('div');
-                    fallback.style.cssText = 'width:36px;height:36px;border-radius:50%;background:#111827;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;';
-                    fallback.textContent = (user.name || user.username || 'U')[0].toUpperCase();
-                    img.parentNode?.insertBefore(fallback, img.nextSibling);
-                  }
-                }}
-              />
+              <div style={{ position: 'relative', width: 36, height: 36, flexShrink: 0 }}>
+                <div
+                  id={`avatar-fallback-${user.username}`}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    borderRadius: '50%',
+                    background: '#111827',
+                    color: '#fff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                  }}
+                >
+                  {(user.name || user.username || 'U')[0].toUpperCase()}
+                </div>
+                <img
+                  src={user.avatarUrl || `https://github.com/${user.username}.png`}
+                  alt={user.username}
+                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', opacity: 0, transition: 'opacity 0.3s' }}
+                  onLoad={(e) => { (e.target as HTMLImageElement).style.opacity = '1'; }}
+                  onError={(e) => {
+                    const img = e.target as HTMLImageElement;
+                    if (!img.src.includes('/api/proxy/')) {
+                      img.src = `${apiBase}/api/proxy/avatar?url=${encodeURIComponent(user.avatarUrl || `https://github.com/${user.username}.png`)}`;
+                    } else {
+                      img.style.display = 'none';
+                    }
+                  }}
+                />
+              </div>
               <div>
                 <div style={{ fontWeight: 600, fontSize: '0.95rem', color: '#111827' }}>
                   {user.name || user.username}
@@ -636,46 +652,51 @@ function ArticleDetail({ post, categories, onBack, apiBase, isMobile }: {
 
               return (
               <div key={comment.id} style={{ display: 'flex', gap: '0.65rem', marginBottom: '1.25rem', paddingBottom: '1.25rem', borderBottom: '1px solid #f3f4f6' }}>
-                <img
-                  src={avatarSrc}
-                  alt={comment.author_name || comment.author || '匿名'}
-                  style={{
-                    width: isMobile ? '30px' : '36px',
-                    height: isMobile ? '30px' : '36px',
-                    borderRadius: '50%',
-                    objectFit: 'cover',
-                    flexShrink: 0,
-                  }}
-                  onError={(e) => {
-                    const img = e.target as HTMLImageElement;
-                    // 如果直接加载失败，尝试使用代理
-                    if (!img.src.includes('/api/proxy/')) {
-                      const proxyUrl = comment.avatar_url
-                        ? `${apiBase}/api/proxy/avatar?url=${encodeURIComponent(comment.avatar_url)}`
-                        : `${apiBase}/api/proxy/avatar?url=${encodeURIComponent(`https://github.com/${comment.author}.png`)}`;
-                      img.src = proxyUrl;
-                    } else {
-                      // 代理也失败，显示首字母
-                      img.style.display = 'none';
-                      const fallback = document.createElement('div');
-                      fallback.style.cssText = `
-                        width: ${isMobile ? '30px' : '36px'}px;
-                        height: ${isMobile ? '30px' : '36px'}px;
-                        border-radius: 50%;
-                        background: #111827;
-                        color: #fff;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        font-size: ${isMobile ? '0.78rem' : '0.85rem'};
-                        font-weight: 600;
-                        flex-shrink: 0;
-                      `;
-                      fallback.textContent = (comment.author || '匿')[0].toUpperCase();
-                      img.parentNode?.insertBefore(fallback, img.nextSibling);
-                    }
-                  }}
-                />
+                <div style={{ position: 'relative', width: isMobile ? 30 : 36, height: isMobile ? 30 : 36, flexShrink: 0 }}>
+                  <div
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      borderRadius: '50%',
+                      background: '#111827',
+                      color: '#fff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: isMobile ? '0.78rem' : '0.85rem',
+                      fontWeight: 600,
+                    }}
+                  >
+                    {(comment.author_name || comment.author || '匿')[0].toUpperCase()}
+                  </div>
+                  <img
+                    src={avatarSrc}
+                    alt={comment.author_name || comment.author || '匿名'}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      borderRadius: '50%',
+                      objectFit: 'cover',
+                      opacity: 0,
+                      transition: 'opacity 0.3s',
+                    }}
+                    onLoad={(e) => { (e.target as HTMLImageElement).style.opacity = '1'; }}
+                    onError={(e) => {
+                      const img = e.target as HTMLImageElement;
+                      if (!img.src.includes('/api/proxy/')) {
+                        const proxyUrl = comment.avatar_url
+                          ? `${apiBase}/api/proxy/avatar?url=${encodeURIComponent(comment.avatar_url)}`
+                          : `${apiBase}/api/proxy/avatar?url=${encodeURIComponent(`https://github.com/${comment.author}.png`)}`;
+                        img.src = proxyUrl;
+                      } else {
+                        img.style.display = 'none';
+                      }
+                    }}
+                  />
+                </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.65rem', marginBottom: '0.3rem', flexWrap: 'wrap' }}>
                     <span style={{ fontWeight: 600, fontSize: isMobile ? '0.85rem' : '0.9rem', color: '#111827' }}>{comment.author_name || comment.author || '匿名'}</span>
@@ -707,23 +728,38 @@ function ArticleDetail({ post, categories, onBack, apiBase, isMobile }: {
             <>
               {user && (
                 <div style={{ marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <img
-                    src={user.avatarUrl || `https://github.com/${user.username}.png`}
-                    alt={user.username}
-                    style={{ width: 28, height: 28, borderRadius: '50%' }}
-                    onError={(e) => {
-                      const img = e.target as HTMLImageElement;
-                      if (!img.src.includes('/api/proxy/')) {
-                        img.src = `${apiBase}/api/proxy/avatar?url=${encodeURIComponent(user.avatarUrl || `https://github.com/${user.username}.png`)}`;
-                      } else {
-                        img.style.display = 'none';
-                        const fallback = document.createElement('div');
-                        fallback.style.cssText = 'width:28px;height:28px;border-radius:50%;background:#111827;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;';
-                        fallback.textContent = (user.name || user.username || 'U')[0].toUpperCase();
-                        img.parentNode?.insertBefore(fallback, img.nextSibling);
-                      }
-                    }}
-                  />
+                  <div style={{ position: 'relative', width: 28, height: 28, flexShrink: 0 }}>
+                    <div
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        borderRadius: '50%',
+                        background: '#111827',
+                        color: '#fff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                      }}
+                    >
+                      {(user.name || user.username || 'U')[0].toUpperCase()}
+                    </div>
+                    <img
+                      src={user.avatarUrl || `https://github.com/${user.username}.png`}
+                      alt={user.username}
+                      style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', opacity: 0, transition: 'opacity 0.3s' }}
+                      onLoad={(e) => { (e.target as HTMLImageElement).style.opacity = '1'; }}
+                      onError={(e) => {
+                        const img = e.target as HTMLImageElement;
+                        if (!img.src.includes('/api/proxy/')) {
+                          img.src = `${apiBase}/api/proxy/avatar?url=${encodeURIComponent(user.avatarUrl || `https://github.com/${user.username}.png`)}`;
+                        } else {
+                          img.style.display = 'none';
+                        }
+                      }}
+                    />
+                  </div>
                   <span style={{ fontSize: '0.88rem', color: '#374151', fontWeight: 500 }}>
                     {user.name || user.username}
                   </span>
