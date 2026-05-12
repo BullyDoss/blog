@@ -272,7 +272,7 @@ function BlogLayout() {
                             color: isSelected ? '#d1d5db' : (isPinned ? '#d97706' : '#6b7280'), borderRadius: 3, fontSize: '0.68rem',
                             fontWeight: 500, whiteSpace: 'nowrap', flexShrink: 0, marginTop: '2px',
                           }}>
-                            {isPinned ? '📌 置顶' : (CATEGORIES.find(c => c.id === post.category)?.label || post.category)}
+                            {isPinned ? '[置顶]' : (CATEGORIES.find(c => c.id === post.category)?.label || post.category)}
                           </span>
                           <span style={{
                             fontSize: '0.84rem', color: isSelected ? '#fff' : '#374151',
