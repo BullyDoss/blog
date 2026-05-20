@@ -323,7 +323,12 @@ function PostEditor({ token, apiBase, post, onSave, onCancel }: { token: string;
     } catch (err: any) { setError(err.message); } finally { setSaving(false); }
   };
 
-  const generateSlugFromTitle = () => { const slug = formData.title.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_]+/g, '-').replace(/-+/g, '-').substring(0, 80); setFormData({ ...formData, slug }); };
+  const generateSlugFromTitle = () => {
+    if (!formData.slug) {
+      const slug = formData.title.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_]+/g, '-').replace(/-+/g, '-').substring(0, 80);
+      setFormData({ ...formData, slug });
+    }
+  };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;

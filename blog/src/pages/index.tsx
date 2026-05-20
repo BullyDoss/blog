@@ -56,9 +56,9 @@ function renderMarkdown(text: string): string {
   html = html.replace(/^> (.+)$/gm, '<blockquote style="border-left:3px solid #e5e7eb;padding-left:1rem;color:#6b7280;margin:1rem 0;">$1</blockquote>');
   html = html.replace(/^- (.+)$/gm, '<li style="margin:0.25rem 0 0.25rem 1.5rem;">$1</li>');
   html = html.replace(/(<li.*<\/li>\n?)+/g, (m) => `<ul style="margin:0.5rem 0;padding-left:1.5rem;">${m}</ul>`);
-  html = html.replace(/\n\n/g, '</p><p style="margin:0 0 1rem;line-height:1.8;">');
+  html = html.replace(/\n\n/g, '</p><p style="margin:0 0 1rem;line-height:1.8;white-space:pre-wrap;">');
   html = html.replace(/\n/g, '<br />');
-  return `<p style="margin:0 0 1rem;line-height:1.8;">${html}</p>`;
+  return `<p style="margin:0 0 1rem;line-height:1.8;white-space:pre-wrap;">${html}</p>`;
 }
 
 function BlogLayout() {
