@@ -4,7 +4,7 @@
 
 > 技术栈：Cloudflare Pages + Docusaurus + Workers + D1 + R2
 
-**线上地址**: <https://blog.bullydoss.com>
+**线上地址**: <https://bullydoss.com>
 
 ---
 
