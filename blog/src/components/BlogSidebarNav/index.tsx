@@ -21,7 +21,7 @@ export default function BlogSidebarNav() {
   const categories = [
     { icon: ICONS.document, name: '学习笔记', path: '/tags/学习笔记' },
     { icon: ICONS.brain, name: '思维风暴', path: '/tags/思维风暴' },
-    { icon: ICONS.chat, name: '夸夸其谈', path: '/tags/夸夸其谈' },
+    { icon: ICONS.chat, name: '生活碎片', path: '/tags/生活碎片' },
     { icon: ICONS.sword, name: '打怪经验', path: '/tags/打怪经验' },
   ];
 

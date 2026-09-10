@@ -24,7 +24,7 @@ if (typeof window !== 'undefined') {
 const CATEGORIES = [
   { id: 'notes', label: '学习笔记' },
   { id: 'brainstorm', label: '思维风暴' },
-  { id: 'chat', label: '夸夸其谈' },
+  { id: 'chat', label: '生活碎片' },
   { id: 'daily', label: '打怪经验' },
   { id: 'submit', label: '投稿专区' },
 ];

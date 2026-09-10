@@ -1,6 +1,6 @@
 module.exports = {
   title: 'BullyDoss的不务正业笔记',
-  tagline: '学习笔记 · 思维风暴 · 夸夸其谈 · 打怪经验',
+  tagline: '学习笔记 · 思维风暴 · 生活碎片 · 打怪经验',
 
   url: 'https://bullydoss.com',
   baseUrl: '/',

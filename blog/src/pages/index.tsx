@@ -4,7 +4,7 @@ import GitHubLogin, { useGitHubAuth } from '../components/GitHubLogin';
 
 export default function HomePage(): React.ReactElement {
   return (
-    <Layout title="BullyDoss的不务正业笔记" description="学习笔记 · 思维风暴 · 夸夸其谈 · 打怪经验">
+    <Layout title="BullyDoss的不务正业笔记" description="学习笔记 · 思维风暴 · 生活碎片 · 打怪经验">
       <BlogLayout />
     </Layout>
   );
@@ -13,7 +13,7 @@ export default function HomePage(): React.ReactElement {
 const CATEGORIES = [
   { id: 'notes', label: '学习笔记', desc: '记录知识，沉淀思考' },
   { id: 'brainstorm', label: '思维风暴', desc: '提问、分享想法、碰撞灵感' },
-  { id: 'chat', label: '夸夸其谈', desc: '分享生活，记录瞬间' },
+  { id: 'chat', label: '生活碎片', desc: '分享生活，记录瞬间' },
   { id: 'daily', label: '打怪经验', desc: '复盘成长，积累阅历' },
   { id: 'submit', label: '投稿专区', desc: '精选投稿内容展示' },
 ];

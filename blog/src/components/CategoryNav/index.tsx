@@ -18,8 +18,8 @@ export default function CategoryNav() {
     },
     {
       icon: '💬',
-      name: '夸夸其谈',
-      path: '/tags/夸夸其谈',
+      name: '生活碎片',
+      path: '/tags/生活碎片',
       description: '观点分享与讨论',
     },
     {
