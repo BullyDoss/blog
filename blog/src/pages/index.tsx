@@ -82,6 +82,8 @@ function BlogLayout() {
   const mainRef = useRef<HTMLElement | null>(null);
   const pendingScrollRef = useRef<number | null>(null);
   const pushedCountRef = useRef(0);
+  const viewIdRef = useRef(0);
+  const navBusyRef = useRef(false);
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
@@ -103,6 +105,7 @@ function BlogLayout() {
   useEffect(() => {
     history.replaceState({ src: 'blog-home', cat: activeCategory, post: selectedPostSlug }, '');
     const onPopState = (e: PopStateEvent) => {
+      navBusyRef.current = false;
       const s: any = e.state;
       if (!s || s.src !== 'blog-home') return;
       pushedCountRef.current = Math.max(0, pushedCountRef.current - 1);
@@ -194,42 +197,58 @@ function BlogLayout() {
     return Math.max(window.scrollY || 0, mainRef.current?.scrollTop || 0);
   };
 
-  // 把当前视图的滚动位置写进当前历史记录，再压入新视图的历史记录
-  const pushView = (cat: string, post: string | null) => {
-    if (typeof window === 'undefined') return;
-    const s: any = history.state;
-    if (s && s.src === 'blog-home') history.replaceState({ ...s, scroll: getScrollTop() }, '');
+  const buildURL = (cat: string, post: string | null) => {
     const params = new URLSearchParams();
     params.set('cat', cat);
     if (post) params.set('post', post);
-    history.pushState({ src: 'blog-home', cat, post }, '', `?${params.toString()}`);
-    pushedCountRef.current += 1;
-    pendingScrollRef.current = 0;
+    return `?${params.toString()}`;
+  };
+
+  const isSameView = (s: any, cat: string, post: string | null) =>
+    !!s && s.src === 'blog-home' && s.cat === cat && (s.post || null) === (post || null);
+
+  // 导航到新视图：重复点击同一视图不入栈（防连点产生重复记录），
+  // 并检测 pushState 被浏览器丢弃的情况，保证历史栈与视图一致
+  const pushView = (cat: string, post: string | null) => {
+    if (typeof window === 'undefined') return;
+    if (navBusyRef.current) return; // 返回过渡期间忽略新点击，避免与 popstate 竞态
+    const cur: any = history.state;
+    if (isSameView(cur, cat, post)) return;
+    if (cur && cur.src === 'blog-home') history.replaceState({ ...cur, scroll: getScrollTop() }, '');
+    const entry = { src: 'blog-home', cat, post, id: ++viewIdRef.current };
+    history.pushState(entry, '', buildURL(cat, post));
+    if ((history.state as any)?.id === entry.id) {
+      pushedCountRef.current += 1;
+      pendingScrollRef.current = 0;
+    } else {
+      // pushState 被浏览器丢弃（快速连点时可能发生）：并入当前记录，保持状态一致
+      history.replaceState({ ...entry, scroll: cur?.scroll }, '');
+    }
+    setActiveCategory(cat);
+    setSelectedPostSlug(post);
   };
 
   const handlePostClick = (post: any) => {
     pushView(post.category, post.slug);
-    setActiveCategory(post.category);
-    setSelectedPostSlug(post.slug);
     setIsMobileSidebarOpen(false);
   };
 
   const handleCategoryClick = (catId: string) => {
     pushView(catId, null);
-    setActiveCategory(catId);
-    setSelectedPostSlug(null);
     setShowSubmitForm(false);
   };
 
   const handleBackToList = () => {
-    if (typeof window !== 'undefined' && pushedCountRef.current > 0) {
+    if (typeof window === 'undefined') return;
+    if (navBusyRef.current) return; // 防止双击连弹两条历史记录
+    if (pushedCountRef.current > 0) {
+      navBusyRef.current = true;
+      setTimeout(() => { navBusyRef.current = false; }, 500); // popstate 未触发时的兜底
       history.back();
     } else {
       // 直接通过链接打开文章页时没有可回退的历史，原地替换
-      if (typeof window !== 'undefined') {
-        history.replaceState({ src: 'blog-home', cat: activeCategory, post: null }, '', `?cat=${activeCategory}`);
-        pendingScrollRef.current = 0;
-      }
+      history.replaceState({ src: 'blog-home', cat: activeCategory, post: null }, '', buildURL(activeCategory, null));
+      pendingScrollRef.current = 0;
       setSelectedPostSlug(null);
     }
   };
