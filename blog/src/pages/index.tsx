@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Layout from '@theme/Layout';
 import GitHubLogin, { useGitHubAuth } from '../components/GitHubLogin';
 
@@ -62,8 +62,15 @@ function renderMarkdown(text: string): string {
 }
 
 function BlogLayout() {
-  const [activeCategory, setActiveCategory] = useState<string>('notes');
-  const [selectedPostSlug, setSelectedPostSlug] = useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = useState<string>(() => {
+    if (typeof window === 'undefined') return 'notes';
+    const cat = new URLSearchParams(window.location.search).get('cat');
+    return CATEGORIES.some(c => c.id === cat) ? (cat as string) : 'notes';
+  });
+  const [selectedPostSlug, setSelectedPostSlug] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    return new URLSearchParams(window.location.search).get('post');
+  });
   const [showSubmitForm, setShowSubmitForm] = useState<boolean>(false);
   const [allPosts, setAllPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -71,6 +78,10 @@ function BlogLayout() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
   const [sidebarSearchQuery, setSidebarSearchQuery] = useState<string>('');
   const [fullPostData, setFullPostData] = useState<any>(null);
+
+  const mainRef = useRef<HTMLElement | null>(null);
+  const pendingScrollRef = useRef<number | null>(null);
+  const pushedCountRef = useRef(0);
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
@@ -87,6 +98,33 @@ function BlogLayout() {
     window.addEventListener('blogSearch', handleSearch);
     return () => window.removeEventListener('blogSearch', handleSearch);
   }, []);
+
+  // 将视图状态（分类/文章）同步到浏览器历史，使侧滑/浏览器返回能回到原列表
+  useEffect(() => {
+    history.replaceState({ src: 'blog-home', cat: activeCategory, post: selectedPostSlug }, '');
+    const onPopState = (e: PopStateEvent) => {
+      const s: any = e.state;
+      if (!s || s.src !== 'blog-home') return;
+      pushedCountRef.current = Math.max(0, pushedCountRef.current - 1);
+      pendingScrollRef.current = typeof s.scroll === 'number' ? s.scroll : 0;
+      setActiveCategory(CATEGORIES.some(c => c.id === s.cat) ? s.cat : 'notes');
+      setSelectedPostSlug(s.post || null);
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 历史切换（返回/前进）后恢复滚动位置
+  useEffect(() => {
+    if (pendingScrollRef.current == null) return;
+    const top = pendingScrollRef.current;
+    pendingScrollRef.current = null;
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      window.scrollTo(0, top);
+      if (mainRef.current) mainRef.current.scrollTop = top;
+    }));
+  }, [selectedPostSlug, activeCategory]);
 
   useEffect(() => {
     if (isMobile && isMobileSidebarOpen) {
@@ -151,14 +189,49 @@ function BlogLayout() {
   const categoryPosts = displayPosts.filter(p => p.category === activeCategory);
   const selectedPost = fullPostData || allPosts.find(p => p.slug === selectedPostSlug);
 
+  const getScrollTop = () => {
+    if (typeof window === 'undefined') return 0;
+    return Math.max(window.scrollY || 0, mainRef.current?.scrollTop || 0);
+  };
+
+  // 把当前视图的滚动位置写进当前历史记录，再压入新视图的历史记录
+  const pushView = (cat: string, post: string | null) => {
+    if (typeof window === 'undefined') return;
+    const s: any = history.state;
+    if (s && s.src === 'blog-home') history.replaceState({ ...s, scroll: getScrollTop() }, '');
+    const params = new URLSearchParams();
+    params.set('cat', cat);
+    if (post) params.set('post', post);
+    history.pushState({ src: 'blog-home', cat, post }, '', `?${params.toString()}`);
+    pushedCountRef.current += 1;
+    pendingScrollRef.current = 0;
+  };
+
   const handlePostClick = (post: any) => {
-    setSelectedPostSlug(post.slug);
+    pushView(post.category, post.slug);
     setActiveCategory(post.category);
+    setSelectedPostSlug(post.slug);
     setIsMobileSidebarOpen(false);
   };
 
-  const handleBackToList = () => {
+  const handleCategoryClick = (catId: string) => {
+    pushView(catId, null);
+    setActiveCategory(catId);
     setSelectedPostSlug(null);
+    setShowSubmitForm(false);
+  };
+
+  const handleBackToList = () => {
+    if (typeof window !== 'undefined' && pushedCountRef.current > 0) {
+      history.back();
+    } else {
+      // 直接通过链接打开文章页时没有可回退的历史，原地替换
+      if (typeof window !== 'undefined') {
+        history.replaceState({ src: 'blog-home', cat: activeCategory, post: null }, '', `?cat=${activeCategory}`);
+        pendingScrollRef.current = 0;
+      }
+      setSelectedPostSlug(null);
+    }
   };
 
   return (
@@ -299,7 +372,7 @@ function BlogLayout() {
         )}
 
         {/* Right Content Area */}
-        <main style={{
+        <main ref={mainRef} style={{
           flex: 1,
           overflowY: isMobile && isMobileSidebarOpen ? 'hidden' : 'auto',
           background: '#fff',
@@ -329,7 +402,7 @@ function BlogLayout() {
             )}
             {CATEGORIES.map((cat) => (
               <button key={cat.id}
-                onClick={() => { setActiveCategory(cat.id); setSelectedPostSlug(null); setShowSubmitForm(false); }}
+                onClick={() => handleCategoryClick(cat.id)}
                 style={{
                   padding: isMobile ? '0.75rem 0' : '0.625rem 0',
                   background: 'transparent',
@@ -618,6 +691,10 @@ function ArticleDetail({ post, categories, onBack, apiBase, isMobile }: {
   return (
     <div style={{ maxWidth: isMobile ? '100%' : '720px', margin: '0 auto' }}>
       <header style={{ marginBottom: isMobile ? '1.5rem' : '2.5rem' }}>
+        <button onClick={onBack}
+          style={{ background: 'none', border: 'none', padding: 0, marginBottom: isMobile ? '0.75rem' : '1rem', color: '#6b7280', fontSize: isMobile ? '0.85rem' : '0.9rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}>
+          ← 返回列表
+        </button>
         <h1 style={{ margin: '0 0 0.4rem', fontSize: isMobile ? '1.5rem' : '2rem', fontWeight: 700, color: '#111827' }}>{post.title}</h1>
         <p style={{ margin: 0, fontSize: '0.9rem', color: '#9ca3af' }}>
           {formatDateTime(post.created_at)}
