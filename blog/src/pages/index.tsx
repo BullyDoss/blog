@@ -83,6 +83,7 @@ function BlogLayout() {
   const pendingScrollRef = useRef<number | null>(null);
   const pushedCountRef = useRef(0);
   const viewIdRef = useRef(0);
+  const lastIdRef = useRef(0);
   const navBusyRef = useRef(false);
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
@@ -108,8 +109,13 @@ function BlogLayout() {
       navBusyRef.current = false;
       const s: any = e.state;
       if (!s || s.src !== 'blog-home') return;
-      pushedCountRef.current = Math.max(0, pushedCountRef.current - 1);
+      // 按条目 id 判断方向：后退减计数，前进加计数，原地替换（id 不变）不动
+      const newId = typeof s.id === 'number' ? s.id : 0;
+      if (newId < lastIdRef.current) pushedCountRef.current = Math.max(0, pushedCountRef.current - 1);
+      else if (newId > lastIdRef.current) pushedCountRef.current += 1;
+      lastIdRef.current = newId;
       pendingScrollRef.current = typeof s.scroll === 'number' ? s.scroll : 0;
+      setFullPostData(null); // 与下面两个状态同帧更新，避免绘制出旧文章
       setActiveCategory(CATEGORIES.some(c => c.id === s.cat) ? s.cat : 'notes');
       setSelectedPostSlug(s.post || null);
     };
@@ -190,7 +196,11 @@ function BlogLayout() {
 
   const currentCategory = CATEGORIES.find(c => c.id === activeCategory);
   const categoryPosts = displayPosts.filter(p => p.category === activeCategory);
-  const selectedPost = fullPostData || allPosts.find(p => p.slug === selectedPostSlug);
+  // slug 守卫：fullPostData 异步到达/清理存在时间差，
+  // 必须校验它属于当前选中的文章，否则会渲染出旧文章的"脏帧"
+  const selectedPost = selectedPostSlug
+    ? (fullPostData?.slug === selectedPostSlug ? fullPostData : allPosts.find(p => p.slug === selectedPostSlug))
+    : null;
 
   const getScrollTop = () => {
     if (typeof window === 'undefined') return 0;
@@ -207,23 +217,40 @@ function BlogLayout() {
   const isSameView = (s: any, cat: string, post: string | null) =>
     !!s && s.src === 'blog-home' && s.cat === cat && (s.post || null) === (post || null);
 
-  // 导航到新视图：重复点击同一视图不入栈（防连点产生重复记录），
-  // 并检测 pushState 被浏览器丢弃的情况，保证历史栈与视图一致
+  // 导航到新视图：重复点击同一视图不入栈（防连点产生重复记录）；
+  // 从文章页发起的跳转一律原地替换，保证文章在历史栈中始终是叶子节点，
+  // 返回时直接回到列表，不会经过之前看过的文章
   const pushView = (cat: string, post: string | null) => {
     if (typeof window === 'undefined') return;
     if (navBusyRef.current) return; // 返回过渡期间忽略新点击，避免与 popstate 竞态
     const cur: any = history.state;
     if (isSameView(cur, cat, post)) return;
-    if (cur && cur.src === 'blog-home') history.replaceState({ ...cur, scroll: getScrollTop() }, '');
-    const entry = { src: 'blog-home', cat, post, id: ++viewIdRef.current };
-    history.pushState(entry, '', buildURL(cat, post));
-    if ((history.state as any)?.id === entry.id) {
-      pushedCountRef.current += 1;
+    if (cur && cur.src === 'blog-home' && cur.post && pushedCountRef.current > 0) {
+      // 文章 → 任意视图：原地替换（栈深不变，保留条目 id 供方向判断）
+      try {
+        history.replaceState({ src: 'blog-home', cat, post, id: cur.id ?? 0 }, '', buildURL(cat, post));
+      } catch (e) { /* 限流等异常时跳过，状态仍然切换 */ }
+      lastIdRef.current = cur.id ?? 0;
       pendingScrollRef.current = 0;
     } else {
-      // pushState 被浏览器丢弃（快速连点时可能发生）：并入当前记录，保持状态一致
-      history.replaceState({ ...entry, scroll: cur?.scroll }, '');
+      if (cur && cur.src === 'blog-home') {
+        try { history.replaceState({ ...cur, scroll: getScrollTop() }, ''); } catch (e) {}
+      }
+      const entry = { src: 'blog-home', cat, post, id: ++viewIdRef.current };
+      try {
+        history.pushState(entry, '', buildURL(cat, post));
+      } catch (e) { /* 限流时跳过入栈 */ }
+      if ((history.state as any)?.id === entry.id) {
+        pushedCountRef.current += 1;
+        pendingScrollRef.current = 0;
+      } else {
+        // pushState 被浏览器丢弃（快速连点时可能发生）：并入当前记录，保持状态一致
+        try { history.replaceState({ ...entry, scroll: cur?.scroll }, ''); } catch (e) {}
+      }
+      lastIdRef.current = entry.id;
     }
+    // 同步清理上一篇文章的数据：若等 effect 清理，会先绘制出一帧旧文章
+    setFullPostData(null);
     setActiveCategory(cat);
     setSelectedPostSlug(post);
   };
@@ -249,6 +276,7 @@ function BlogLayout() {
       // 直接通过链接打开文章页时没有可回退的历史，原地替换
       history.replaceState({ src: 'blog-home', cat: activeCategory, post: null }, '', buildURL(activeCategory, null));
       pendingScrollRef.current = 0;
+      setFullPostData(null);
       setSelectedPostSlug(null);
     }
   };
