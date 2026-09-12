@@ -18,6 +18,9 @@ const CATEGORIES = [
   { id: 'submit', label: '投稿专区', desc: '精选投稿内容展示' },
 ];
 
+// 列表分页：每个分类内每页 6 篇
+const PAGE_SIZE = 6;
+
 function formatDate(dateStr: string | null | undefined) {
   if (!dateStr) return '-';
   const d = new Date(dateStr);
@@ -63,6 +66,10 @@ function renderMarkdown(text: string): string {
 
 // ===== 临时调试：导航轨迹记录（问题定位后移除）=====
 const NAV_TRAIL_KEY = 'navTrail';
+// 仅在页面加载时判断一次：导航会改写 URL 的查询参数，逐次渲染检查会导致面板消失
+const IS_DEBUG = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('debug') === '1';
+// 每个历史条目的滚动位置（内存存储，不占用浏览器 history 写入配额）
+const scrollStore: Record<number, number> = {};
 function logNav(msg: string) {
   if (typeof window === 'undefined') return;
   try {
@@ -107,6 +114,11 @@ function BlogLayout() {
     if (typeof window === 'undefined') return null;
     return new URLSearchParams(window.location.search).get('post');
   });
+  const [currentPage, setCurrentPage] = useState<number>(() => {
+    if (typeof window === 'undefined') return 1;
+    const p = parseInt(new URLSearchParams(window.location.search).get('page') || '1', 10);
+    return Number.isFinite(p) && p >= 1 ? p : 1;
+  });
   const [showSubmitForm, setShowSubmitForm] = useState<boolean>(false);
   const [allPosts, setAllPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -133,7 +145,7 @@ function BlogLayout() {
 
   useEffect(() => {
     fetchAllPosts();
-    const handleSearch = (e: any) => { setSearchQuery(e.detail); };
+    const handleSearch = (e: any) => { setSearchQuery(e.detail); setCurrentPage(1); };
     window.addEventListener('blogSearch', handleSearch);
     return () => window.removeEventListener('blogSearch', handleSearch);
   }, []);
@@ -144,7 +156,7 @@ function BlogLayout() {
     // 导致新开的文章直接展示在中间，改为完全由本组件接管
     if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
     logNav(`MOUNT url=${typeof window !== 'undefined' ? window.location.search : ''}`);
-    history.replaceState({ src: 'blog-home', cat: activeCategory, post: selectedPostSlug }, '');
+    history.replaceState({ src: 'blog-home', cat: activeCategory, post: selectedPostSlug, page: currentPage }, '');
     const onPopState = (e: PopStateEvent) => {
       navBusyRef.current = false;
       const s: any = e.state;
@@ -156,10 +168,12 @@ function BlogLayout() {
       else if (newId > lastIdRef.current) { dir = 'FWD'; pushedCountRef.current += 1; }
       lastIdRef.current = newId;
       logNav(`POP ${dir} id=${newId} cat=${s.cat} post=${s.post} cnt=${pushedCountRef.current}`);
-      pendingScrollRef.current = typeof s.scroll === 'number' ? s.scroll : 0;
-      setFullPostData(null); // 与下面两个状态同帧更新，避免绘制出旧文章
+      const restoredPage = typeof s.page === 'number' && s.page >= 1 ? s.page : 1;
+      pendingScrollRef.current = typeof s.scroll === 'number' ? s.scroll : (scrollStore[newId] ?? 0);
+      setFullPostData(null); // 与下面几个状态同帧更新，避免绘制出旧文章
       setActiveCategory(CATEGORIES.some(c => c.id === s.cat) ? s.cat : 'notes');
       setSelectedPostSlug(s.post || null);
+      setCurrentPage(restoredPage);
     };
     window.addEventListener('popstate', onPopState);
     return () => {
@@ -181,6 +195,19 @@ function BlogLayout() {
     apply(); // 先同步滚动一次，避免内容渲染间隙停留在旧位置
     requestAnimationFrame(() => requestAnimationFrame(apply));
   }, [selectedPostSlug, activeCategory]);
+
+  // 实时记录当前历史条目的滚动位置，返回时据此恢复
+  useEffect(() => {
+    const capture = () => { scrollStore[lastIdRef.current] = getScrollTop(); };
+    window.addEventListener('scroll', capture, { passive: true });
+    const m = mainRef.current;
+    m?.addEventListener('scroll', capture, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', capture);
+      m?.removeEventListener('scroll', capture);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (isMobile && isMobileSidebarOpen) {
@@ -243,6 +270,16 @@ function BlogLayout() {
 
   const currentCategory = CATEGORIES.find(c => c.id === activeCategory);
   const categoryPosts = displayPosts.filter(p => p.category === activeCategory);
+
+  // 分页：每个分类内每页 PAGE_SIZE 篇；safePage 兜底收敛越界页码
+  const totalPages = Math.max(1, Math.ceil(categoryPosts.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const pagedPosts = categoryPosts.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  // 数据加载完成后收敛越界页码（如搜索导致总数变少）
+  useEffect(() => {
+    if (!loading && currentPage > totalPages) setCurrentPage(totalPages);
+  }, [loading, currentPage, totalPages]);
   // slug 守卫：fullPostData 异步到达/清理存在时间差，
   // 必须校验它属于当前选中的文章，否则会渲染出旧文章的"脏帧"
   const selectedPost = selectedPostSlug
@@ -254,10 +291,11 @@ function BlogLayout() {
     return Math.max(window.scrollY || 0, mainRef.current?.scrollTop || 0);
   };
 
-  const buildURL = (cat: string, post: string | null) => {
+  const buildURL = (cat: string, post: string | null, page: number = 1) => {
     const params = new URLSearchParams();
     params.set('cat', cat);
     if (post) params.set('post', post);
+    if (page > 1) params.set('page', String(page));
     return `?${params.toString()}`;
   };
 
@@ -272,34 +310,49 @@ function BlogLayout() {
     if (navBusyRef.current) return; // 返回过渡期间忽略新点击，避免与 popstate 竞态
     const cur: any = history.state;
     if (isSameView(cur, cat, post)) return;
-    const saveScroll = () => {
-      if (cur && cur.src === 'blog-home') {
-        try { history.replaceState({ ...cur, scroll: getScrollTop() }, ''); } catch (e) {}
+    // pushState 被浏览器丢弃时（配额限流/惯性滚动中点击）绝不改写父级条目——
+    // 那会破坏返回目标；改为延迟重试两次，仍失败则放弃写历史（返回退化为回上一视图）
+    const pushEntry = (viewCat: string, viewPost: string | null, viewPage: number) => {
+      const entry = { src: 'blog-home', cat: viewCat, post: viewPost, id: ++viewIdRef.current, page: viewPage };
+      const tryPush = (): boolean => {
+        try { history.pushState(entry, '', buildURL(viewCat, viewPost, viewPage)); } catch (e) { /* 配额限流等 */ }
+        if ((history.state as any)?.id === entry.id) {
+          pushedCountRef.current += 1;
+          lastIdRef.current = entry.id;
+          logNav(`PUSH ok id=${entry.id} cnt=${pushedCountRef.current}`);
+          return true;
+        }
+        return false;
+      };
+      if (!tryPush()) {
+        logNav(`PUSH-DROPPED id=${entry.id} ${viewCat}/${viewPost} -> retry`);
+        const fromId = lastIdRef.current;
+        setTimeout(() => {
+          if (lastIdRef.current !== fromId) return; // 期间发生了新导航，放弃重试
+          if (!tryPush()) {
+            setTimeout(() => {
+              if (lastIdRef.current !== fromId) return; // 期间发生了新导航，放弃重试
+              if (!tryPush()) logNav(`PUSH-GIVEUP id=${entry.id}`);
+            }, 350);
+          }
+        }, 0);
       }
-    };
-    const pushEntry = (viewCat: string, viewPost: string | null) => {
-      const entry = { src: 'blog-home', cat: viewCat, post: viewPost, id: ++viewIdRef.current };
-      try { history.pushState(entry, '', buildURL(viewCat, viewPost)); } catch (e) { /* 限流时跳过入栈 */ }
-      if ((history.state as any)?.id === entry.id) {
-        pushedCountRef.current += 1;
-      } else {
-        // pushState 被浏览器丢弃（快速连点时可能发生）：并入当前记录，保持状态一致
-        try { history.replaceState({ ...entry, scroll: 0 }, ''); } catch (e) {}
-      }
-      lastIdRef.current = entry.id;
       pendingScrollRef.current = 0;
     };
+    // 页码语义：newPage 表示"该视图对应的列表页码"；文章视图携带来源列表的页码，
+    // 返回/切 TAB 时据此恢复列表页
+    let newPage = currentPage;
     if (post) {
       if (isSameView(cur, cat, null)) {
-        // 当前正是该分类列表：保存列表滚动位置后压入文章
+        // 当前正是该分类列表：压入文章（滚动位置由 scrollStore 实时记录）
         logNav(`A1 list-push ${cat}/${post} cnt=${pushedCountRef.current}`);
-        saveScroll();
-        pushEntry(cat, post);
+        pushEntry(cat, post, currentPage);
       } else if (cur && cur.src === 'blog-home' && cur.post && cur.cat === cat && pushedCountRef.current > 0) {
         // 同分类文章 → 文章：父列表已就位，直接原地替换
         logNav(`A2 art-replace ${cat}/${post} id=${cur.id ?? 0}`);
+        newPage = typeof cur.page === 'number' ? cur.page : currentPage;
         try {
-          history.replaceState({ src: 'blog-home', cat, post, id: cur.id ?? 0 }, '', buildURL(cat, post));
+          history.replaceState({ src: 'blog-home', cat, post, id: cur.id ?? 0, page: newPage }, '', buildURL(cat, post, newPage));
         } catch (e) { /* 限流等异常时跳过，状态仍然切换 */ }
         lastIdRef.current = cur.id ?? 0;
         pendingScrollRef.current = 0;
@@ -307,32 +360,36 @@ function BlogLayout() {
         // 其他来源（其他分类列表/其他分类文章/直链文章）：
         // 先把当前条目改写为该分类的列表作为返回目标，再压入文章
         logNav(`A3 rewrite+push ${cat}/${post} from=${cur ? `${cur.cat}/${cur.post}` : 'null'}`);
+        newPage = 1;
         if (cur && cur.src === 'blog-home') {
           try {
-            history.replaceState({ src: 'blog-home', cat, post: null, id: cur.id ?? 0, scroll: 0 }, '', buildURL(cat, null));
+            history.replaceState({ src: 'blog-home', cat, post: null, id: cur.id ?? 0, scroll: 0, page: 1 }, '', buildURL(cat, null, 1));
           } catch (e) {}
           lastIdRef.current = cur.id ?? 0;
         }
-        pushEntry(cat, post);
+        pushEntry(cat, post, 1);
       }
     } else if (cur && cur.src === 'blog-home' && cur.post && pushedCountRef.current > 0) {
       // 文章 → 分类列表（TAB）：原地替换（栈深不变，保留条目 id 供方向判断）
+      // 同分类：恢复文章来源的列表页码；跨分类：新列表从第 1 页开始
       logNav(`T-replace ${cat} (from article ${cur.cat}) cnt=${pushedCountRef.current}`);
+      newPage = cur.cat === cat && typeof cur.page === 'number' ? cur.page : 1;
       try {
-        history.replaceState({ src: 'blog-home', cat, post: null, id: cur.id ?? 0 }, '', buildURL(cat, null));
+        history.replaceState({ src: 'blog-home', cat, post: null, id: cur.id ?? 0, page: newPage }, '', buildURL(cat, null, newPage));
       } catch (e) { /* 限流等异常时跳过，状态仍然切换 */ }
       lastIdRef.current = cur.id ?? 0;
       pendingScrollRef.current = 0;
     } else {
-      // 列表 → 分类列表：保存当前列表滚动位置后压栈
+      // 列表 → 分类列表：压栈（滚动位置由 scrollStore 实时记录）
       logNav(`T-push ${cat} cnt=${pushedCountRef.current}`);
-      saveScroll();
-      pushEntry(cat, null);
+      newPage = 1;
+      pushEntry(cat, null, 1);
     }
     // 同步清理上一篇文章的数据：若等 effect 清理，会先绘制出一帧旧文章
     setFullPostData(null);
     setActiveCategory(cat);
     setSelectedPostSlug(post);
+    setCurrentPage(newPage);
   };
 
   const handlePostClick = (post: any) => {
@@ -356,11 +413,26 @@ function BlogLayout() {
     } else {
       // 直接通过链接打开文章页时没有可回退的历史，原地替换
       logNav(`BACKBTN replace-to-list cat=${activeCategory}`);
-      history.replaceState({ src: 'blog-home', cat: activeCategory, post: null }, '', buildURL(activeCategory, null));
+      history.replaceState({ src: 'blog-home', cat: activeCategory, post: null, page: currentPage }, '', buildURL(activeCategory, null, currentPage));
       pendingScrollRef.current = 0;
       setFullPostData(null);
       setSelectedPostSlug(null);
     }
+  };
+
+  // 切换列表页码：仅原地替换当前历史条目（不新增栈深），使返回/前进能记住页码
+  const handlePageChange = (page: number) => {
+    if (typeof window === 'undefined') return;
+    if (page === currentPage || navBusyRef.current) return;
+    setCurrentPage(page);
+    try {
+      const cur: any = history.state;
+      const entry = { src: 'blog-home', cat: activeCategory, post: null, id: (cur && typeof cur.id === 'number' ? cur.id : 0), page };
+      history.replaceState(entry, '', buildURL(activeCategory, null, page));
+      lastIdRef.current = entry.id;
+    } catch (e) { /* 限流等异常时仅更新状态 */ }
+    window.scrollTo(0, 0);
+    if (mainRef.current) mainRef.current.scrollTop = 0;
   };
 
   return (
@@ -368,7 +440,7 @@ function BlogLayout() {
       minHeight: 'calc(100vh - 60px)',
       background: '#fff',
     }}>
-      {typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('debug') === '1' && <NavTrailOverlay />}
+      {IS_DEBUG && <NavTrailOverlay />}
 
       <div style={{ display: 'flex', position: 'relative' }}>
         {/* Left Sidebar */}
@@ -595,33 +667,49 @@ function BlogLayout() {
                     还没有内容，快去后台发布吧
                   </div>
                 ) : (
-                  <div style={{ maxWidth: '100%' }}>
-                    {categoryPosts.map((post) => (
-                      <article key={post.id} onClick={() => handlePostClick(post)}
-                        style={{
-                          marginBottom: isMobile ? '1.5rem' : '2.5rem',
-                          paddingBottom: isMobile ? '1.2rem' : '2rem',
-                          borderBottom: categoryPosts.indexOf(post) < categoryPosts.length - 1 ? '1px solid #f3f4f6' : 'none',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.35rem' }}>
-                          <span style={{ display: 'inline-block', padding: '2px 8px', background: '#f3f4f6', color: '#6b7280', borderRadius: 4, fontSize: isMobile ? '0.72rem' : '0.78rem', fontWeight: 500, whiteSpace: 'nowrap' }}>
-                            {CATEGORIES.find(c => c.id === post.category)?.label || post.category}
-                          </span>
-                          <span style={{ fontSize: isMobile ? '0.75rem' : '0.82rem', color: '#9ca3af', whiteSpace: 'nowrap' }}>
-                            {formatDate(post.created_at)}
-                          </span>
-                        </div>
-                        <h2 style={{ margin: '0 0 0.4rem', fontSize: isMobile ? '1.15rem' : '1.35rem', fontWeight: 600, color: '#111827', lineHeight: 1.4 }}>
-                          {post.title}
-                        </h2>
-                        <p style={{ margin: 0, color: '#6b7280', fontSize: isMobile ? '0.88rem' : '0.95rem', lineHeight: 1.6 }}>
-                          {post.excerpt || '-'}
-                        </p>
-                      </article>
-                    ))}
-                  </div>
+                  <>
+                    <div style={{ maxWidth: '100%' }}>
+                      {pagedPosts.map((post) => (
+                        <article key={post.id} onClick={() => handlePostClick(post)}
+                          style={{
+                            marginBottom: isMobile ? '1.5rem' : '2.5rem',
+                            paddingBottom: isMobile ? '1.2rem' : '2rem',
+                            borderBottom: pagedPosts.indexOf(post) < pagedPosts.length - 1 ? '1px solid #f3f4f6' : 'none',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.35rem' }}>
+                            <span style={{ display: 'inline-block', padding: '2px 8px', background: '#f3f4f6', color: '#6b7280', borderRadius: 4, fontSize: isMobile ? '0.72rem' : '0.78rem', fontWeight: 500, whiteSpace: 'nowrap' }}>
+                              {CATEGORIES.find(c => c.id === post.category)?.label || post.category}
+                            </span>
+                            <span style={{ fontSize: isMobile ? '0.75rem' : '0.82rem', color: '#9ca3af', whiteSpace: 'nowrap' }}>
+                              {formatDate(post.created_at)}
+                            </span>
+                          </div>
+                          <h2 style={{ margin: '0 0 0.4rem', fontSize: isMobile ? '1.15rem' : '1.35rem', fontWeight: 600, color: '#111827', lineHeight: 1.4 }}>
+                            {post.title}
+                          </h2>
+                          <p style={{ margin: 0, color: '#6b7280', fontSize: isMobile ? '0.88rem' : '0.95rem', lineHeight: 1.6 }}>
+                            {post.excerpt || '-'}
+                          </p>
+                        </article>
+                      ))}
+                    </div>
+
+                    {totalPages > 1 && (
+                      <nav style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: isMobile ? '0.35rem' : '0.5rem', marginTop: isMobile ? '1.75rem' : '2.5rem', flexWrap: 'wrap' }}
+                        onClick={(e) => e.stopPropagation()}>
+                        <button onClick={() => handlePageChange(safePage - 1)} disabled={safePage <= 1}
+                          style={{ padding: isMobile ? '5px 12px' : '6px 14px', background: safePage <= 1 ? '#f9fafb' : '#fff', color: safePage <= 1 ? '#d1d5db' : '#374151', border: '1px solid #e5e7eb', borderRadius: 6, cursor: safePage <= 1 ? 'not-allowed' : 'pointer', fontSize: isMobile ? '0.8rem' : '0.84rem' }}>上一页</button>
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                          <button key={p} onClick={() => handlePageChange(p)}
+                            style={{ minWidth: isMobile ? '30px' : '34px', padding: isMobile ? '5px 0' : '6px 0', background: p === safePage ? '#111827' : '#fff', color: p === safePage ? '#fff' : '#374151', border: p === safePage ? '1px solid #111827' : '1px solid #e5e7eb', borderRadius: 6, cursor: 'pointer', fontSize: isMobile ? '0.8rem' : '0.84rem', fontWeight: p === safePage ? 600 : 400 }}>{p}</button>
+                        ))}
+                        <button onClick={() => handlePageChange(safePage + 1)} disabled={safePage >= totalPages}
+                          style={{ padding: isMobile ? '5px 12px' : '6px 14px', background: safePage >= totalPages ? '#f9fafb' : '#fff', color: safePage >= totalPages ? '#d1d5db' : '#374151', border: '1px solid #e5e7eb', borderRadius: 6, cursor: safePage >= totalPages ? 'not-allowed' : 'pointer', fontSize: isMobile ? '0.8rem' : '0.84rem' }}>下一页</button>
+                      </nav>
+                    )}
+                  </>
                 )}
               </>
             )}

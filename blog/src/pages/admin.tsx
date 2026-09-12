@@ -188,7 +188,9 @@ function AdminPanel({ token, onLogout, apiBase }: { token: string; onLogout: () 
 }
 
 function AllPostsManager({ token, apiBase, onEdit }: { token: string; apiBase: string; onEdit: (post: any) => void }) {
+  const PAGE_SIZE = 6;
   const [posts, setPosts] = React.useState<any[]>([]);
+  const [currentPage, setCurrentPage] = React.useState(1);
   const [loading, setLoading] = React.useState(true);
   const [errorMsg, setErrorMsg] = React.useState('');
   const [deletingId, setDeletingId] = React.useState<number | null>(null);
@@ -213,6 +215,11 @@ function AllPostsManager({ token, apiBase, onEdit }: { token: string; apiBase: s
 
   const fetchPosts = async () => { setLoading(true); setErrorMsg(''); try { const res = await safeFetch(`${apiBase}/api/admin/posts`); const data = await res.json(); setPosts(data); } catch (err: any) { setErrorMsg(err.message); } finally { setLoading(false); } };
   React.useEffect(() => { fetchPosts(); }, [token]);
+
+  // 分页：每页 6 篇；删除/刷新后条数变少时自动收敛页码
+  const totalPages = Math.max(1, Math.ceil(posts.length / PAGE_SIZE));
+  React.useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages); }, [currentPage, totalPages]);
+  const pagedPosts = posts.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const deletePost = async (postId: number) => { if (!confirm('确定删除？')) return; setDeletingId(postId); try { await safeFetch(`${apiBase}/api/admin/posts/${postId}`, { method: 'DELETE' }); setPosts(posts.filter(p => p.id !== postId)); } catch (err: any) { alert(err.message); } finally { setDeletingId(null); } };
 
@@ -272,7 +279,7 @@ function AllPostsManager({ token, apiBase, onEdit }: { token: string; apiBase: s
               <th style={{ padding: isMobile ? '10px 12px' : '12px 18px', textAlign: 'right', fontWeight: 600, fontSize: isMobile ? '0.82rem' : '0.87rem', color: '#374151', borderBottom: '2px solid #e5e7eb' }}>操作</th>
             </tr>
           </thead>
-          <tbody>{posts.map((post) => {
+          <tbody>{pagedPosts.map((post) => {
             const isPinned = post.is_pinned === 1 || post.is_pinned === true;
             const isHidden = post.status === 'hidden';
             return (
@@ -299,7 +306,21 @@ function AllPostsManager({ token, apiBase, onEdit }: { token: string; apiBase: s
       </div>
 
       {posts.length === 0 && !errorMsg && (<div style={{ textAlign: 'center', padding: isMobile ? '2.5rem 1rem' : '4rem 2rem', color: '#9ca3af', fontSize: isMobile ? '0.92rem' : '1rem' }}>暂无文章，快去发布第一篇吧</div>)}
-      <div style={{ marginTop: '0.75rem', textAlign: 'right', color: '#9ca3af', fontSize: '0.82rem' }}>共 {posts.length} 篇文章</div>
+
+      {totalPages > 1 && (
+        <nav style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: isMobile ? '0.35rem' : '0.5rem', marginTop: '1.25rem', flexWrap: 'wrap' }}>
+          <button onClick={() => setCurrentPage(currentPage - 1)} disabled={currentPage <= 1}
+            style={{ padding: isMobile ? '5px 12px' : '6px 14px', background: currentPage <= 1 ? '#f9fafb' : '#fff', color: currentPage <= 1 ? '#d1d5db' : '#374151', border: '1px solid #e5e7eb', borderRadius: 6, cursor: currentPage <= 1 ? 'not-allowed' : 'pointer', fontSize: isMobile ? '0.8rem' : '0.84rem' }}>上一页</button>
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+            <button key={p} onClick={() => setCurrentPage(p)}
+              style={{ minWidth: isMobile ? '30px' : '34px', padding: isMobile ? '5px 0' : '6px 0', background: p === currentPage ? '#111827' : '#fff', color: p === currentPage ? '#fff' : '#374151', border: p === currentPage ? '1px solid #111827' : '1px solid #e5e7eb', borderRadius: 6, cursor: 'pointer', fontSize: isMobile ? '0.8rem' : '0.84rem', fontWeight: p === currentPage ? 600 : 400 }}>{p}</button>
+          ))}
+          <button onClick={() => setCurrentPage(currentPage + 1)} disabled={currentPage >= totalPages}
+            style={{ padding: isMobile ? '5px 12px' : '6px 14px', background: currentPage >= totalPages ? '#f9fafb' : '#fff', color: currentPage >= totalPages ? '#d1d5db' : '#374151', border: '1px solid #e5e7eb', borderRadius: 6, cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer', fontSize: isMobile ? '0.8rem' : '0.84rem' }}>下一页</button>
+        </nav>
+      )}
+
+      <div style={{ marginTop: '0.75rem', textAlign: 'right', color: '#9ca3af', fontSize: '0.82rem' }}>共 {posts.length} 篇文章{totalPages > 1 ? `，第 ${currentPage} / ${totalPages} 页` : ''}</div>
     </div>
   );
 }
