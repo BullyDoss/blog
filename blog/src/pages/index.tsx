@@ -61,6 +61,42 @@ function renderMarkdown(text: string): string {
   return `<p style="margin:0 0 1rem;line-height:1.8;white-space:pre-wrap;">${html}</p>`;
 }
 
+// ===== 临时调试：导航轨迹记录（问题定位后移除）=====
+const NAV_TRAIL_KEY = 'navTrail';
+function logNav(msg: string) {
+  if (typeof window === 'undefined') return;
+  try {
+    const t: string[] = JSON.parse(sessionStorage.getItem(NAV_TRAIL_KEY) || '[]');
+    const now = new Date();
+    const ts = `${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}.${String(now.getMilliseconds()).padStart(3, '0')}`;
+    t.push(`${ts} ${msg}`);
+    while (t.length > 50) t.shift();
+    sessionStorage.setItem(NAV_TRAIL_KEY, JSON.stringify(t));
+  } catch (e) {}
+}
+
+// ===== 临时调试：?debug=1 时在左下角实时显示导航轨迹（问题定位后移除）=====
+function NavTrailOverlay() {
+  const [lines, setLines] = React.useState<string[]>([]);
+  React.useEffect(() => {
+    const read = () => { try { setLines(JSON.parse(sessionStorage.getItem(NAV_TRAIL_KEY) || '[]')); } catch (e) {} };
+    read();
+    const id = setInterval(read, 400);
+    window.addEventListener('popstate', read);
+    return () => { clearInterval(id); window.removeEventListener('popstate', read); };
+  }, []);
+  return (
+    <div style={{
+      position: 'fixed', left: 4, bottom: 4, zIndex: 99999,
+      background: 'rgba(0,0,0,0.78)', color: '#4ade80', font: '10px/1.5 monospace',
+      padding: '6px 8px', borderRadius: 6, maxWidth: '78vw', maxHeight: '45vh',
+      overflow: 'auto', pointerEvents: 'none', whiteSpace: 'nowrap',
+    }}>
+      {lines.map((l, i) => <div key={i}>{l}</div>)}
+    </div>
+  );
+}
+
 function BlogLayout() {
   const [activeCategory, setActiveCategory] = useState<string>(() => {
     if (typeof window === 'undefined') return 'notes';
@@ -107,16 +143,19 @@ function BlogLayout() {
     // 浏览器自带的滚动恢复会在内容异步撑高后把旧位置套回来，
     // 导致新开的文章直接展示在中间，改为完全由本组件接管
     if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+    logNav(`MOUNT url=${typeof window !== 'undefined' ? window.location.search : ''}`);
     history.replaceState({ src: 'blog-home', cat: activeCategory, post: selectedPostSlug }, '');
     const onPopState = (e: PopStateEvent) => {
       navBusyRef.current = false;
       const s: any = e.state;
-      if (!s || s.src !== 'blog-home') return;
+      if (!s || s.src !== 'blog-home') { logNav(`POP foreign state=${JSON.stringify(s)}`); return; }
       // 按条目 id 判断方向：后退减计数，前进加计数，原地替换（id 不变）不动
       const newId = typeof s.id === 'number' ? s.id : 0;
-      if (newId < lastIdRef.current) pushedCountRef.current = Math.max(0, pushedCountRef.current - 1);
-      else if (newId > lastIdRef.current) pushedCountRef.current += 1;
+      let dir = 'SAME';
+      if (newId < lastIdRef.current) { dir = 'BACK'; pushedCountRef.current = Math.max(0, pushedCountRef.current - 1); }
+      else if (newId > lastIdRef.current) { dir = 'FWD'; pushedCountRef.current += 1; }
       lastIdRef.current = newId;
+      logNav(`POP ${dir} id=${newId} cat=${s.cat} post=${s.post} cnt=${pushedCountRef.current}`);
       pendingScrollRef.current = typeof s.scroll === 'number' ? s.scroll : 0;
       setFullPostData(null); // 与下面两个状态同帧更新，避免绘制出旧文章
       setActiveCategory(CATEGORIES.some(c => c.id === s.cat) ? s.cat : 'notes');
@@ -253,10 +292,12 @@ function BlogLayout() {
     if (post) {
       if (isSameView(cur, cat, null)) {
         // 当前正是该分类列表：保存列表滚动位置后压入文章
+        logNav(`A1 list-push ${cat}/${post} cnt=${pushedCountRef.current}`);
         saveScroll();
         pushEntry(cat, post);
       } else if (cur && cur.src === 'blog-home' && cur.post && cur.cat === cat && pushedCountRef.current > 0) {
         // 同分类文章 → 文章：父列表已就位，直接原地替换
+        logNav(`A2 art-replace ${cat}/${post} id=${cur.id ?? 0}`);
         try {
           history.replaceState({ src: 'blog-home', cat, post, id: cur.id ?? 0 }, '', buildURL(cat, post));
         } catch (e) { /* 限流等异常时跳过，状态仍然切换 */ }
@@ -265,6 +306,7 @@ function BlogLayout() {
       } else {
         // 其他来源（其他分类列表/其他分类文章/直链文章）：
         // 先把当前条目改写为该分类的列表作为返回目标，再压入文章
+        logNav(`A3 rewrite+push ${cat}/${post} from=${cur ? `${cur.cat}/${cur.post}` : 'null'}`);
         if (cur && cur.src === 'blog-home') {
           try {
             history.replaceState({ src: 'blog-home', cat, post: null, id: cur.id ?? 0, scroll: 0 }, '', buildURL(cat, null));
@@ -275,6 +317,7 @@ function BlogLayout() {
       }
     } else if (cur && cur.src === 'blog-home' && cur.post && pushedCountRef.current > 0) {
       // 文章 → 分类列表（TAB）：原地替换（栈深不变，保留条目 id 供方向判断）
+      logNav(`T-replace ${cat} (from article ${cur.cat}) cnt=${pushedCountRef.current}`);
       try {
         history.replaceState({ src: 'blog-home', cat, post: null, id: cur.id ?? 0 }, '', buildURL(cat, null));
       } catch (e) { /* 限流等异常时跳过，状态仍然切换 */ }
@@ -282,6 +325,7 @@ function BlogLayout() {
       pendingScrollRef.current = 0;
     } else {
       // 列表 → 分类列表：保存当前列表滚动位置后压栈
+      logNav(`T-push ${cat} cnt=${pushedCountRef.current}`);
       saveScroll();
       pushEntry(cat, null);
     }
@@ -303,13 +347,15 @@ function BlogLayout() {
 
   const handleBackToList = () => {
     if (typeof window === 'undefined') return;
-    if (navBusyRef.current) return; // 防止双击连弹两条历史记录
+    if (navBusyRef.current) { logNav('BACKBTN ignored (busy)'); return; } // 防止双击连弹两条历史记录
     if (pushedCountRef.current > 0) {
+      logNav(`BACKBTN history.back cnt=${pushedCountRef.current}`);
       navBusyRef.current = true;
       setTimeout(() => { navBusyRef.current = false; }, 500); // popstate 未触发时的兜底
       history.back();
     } else {
       // 直接通过链接打开文章页时没有可回退的历史，原地替换
+      logNav(`BACKBTN replace-to-list cat=${activeCategory}`);
       history.replaceState({ src: 'blog-home', cat: activeCategory, post: null }, '', buildURL(activeCategory, null));
       pendingScrollRef.current = 0;
       setFullPostData(null);
@@ -322,6 +368,7 @@ function BlogLayout() {
       minHeight: 'calc(100vh - 60px)',
       background: '#fff',
     }}>
+      {typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('debug') === '1' && <NavTrailOverlay />}
 
       <div style={{ display: 'flex', position: 'relative' }}>
         {/* Left Sidebar */}
