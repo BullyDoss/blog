@@ -104,6 +104,9 @@ function BlogLayout() {
 
   // 将视图状态（分类/文章）同步到浏览器历史，使侧滑/浏览器返回能回到原列表
   useEffect(() => {
+    // 浏览器自带的滚动恢复会在内容异步撑高后把旧位置套回来，
+    // 导致新开的文章直接展示在中间，改为完全由本组件接管
+    if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
     history.replaceState({ src: 'blog-home', cat: activeCategory, post: selectedPostSlug }, '');
     const onPopState = (e: PopStateEvent) => {
       navBusyRef.current = false;
@@ -120,19 +123,24 @@ function BlogLayout() {
       setSelectedPostSlug(s.post || null);
     };
     window.addEventListener('popstate', onPopState);
-    return () => window.removeEventListener('popstate', onPopState);
+    return () => {
+      window.removeEventListener('popstate', onPopState);
+      if ('scrollRestoration' in history) history.scrollRestoration = 'auto';
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 历史切换（返回/前进）后恢复滚动位置
+  // 历史切换（返回/前进）后恢复滚动位置；新视图则回到顶部
   useEffect(() => {
     if (pendingScrollRef.current == null) return;
     const top = pendingScrollRef.current;
     pendingScrollRef.current = null;
-    requestAnimationFrame(() => requestAnimationFrame(() => {
+    const apply = () => {
       window.scrollTo(0, top);
       if (mainRef.current) mainRef.current.scrollTop = top;
-    }));
+    };
+    apply(); // 先同步滚动一次，避免内容渲染间隙停留在旧位置
+    requestAnimationFrame(() => requestAnimationFrame(apply));
   }, [selectedPostSlug, activeCategory]);
 
   useEffect(() => {
@@ -217,37 +225,65 @@ function BlogLayout() {
   const isSameView = (s: any, cat: string, post: string | null) =>
     !!s && s.src === 'blog-home' && s.cat === cat && (s.post || null) === (post || null);
 
-  // 导航到新视图：重复点击同一视图不入栈（防连点产生重复记录）；
-  // 从文章页发起的跳转一律原地替换，保证文章在历史栈中始终是叶子节点，
-  // 返回时直接回到列表，不会经过之前看过的文章
+  // 导航到新视图：重复点击同一视图不入栈（防连点产生重复记录）。
+  // 核心不变式：文章条目的下方必须紧邻其所属分类的列表条目，
+  // 这样无论从哪进入文章，返回都落在该文章分类的列表上
   const pushView = (cat: string, post: string | null) => {
     if (typeof window === 'undefined') return;
     if (navBusyRef.current) return; // 返回过渡期间忽略新点击，避免与 popstate 竞态
     const cur: any = history.state;
     if (isSameView(cur, cat, post)) return;
-    if (cur && cur.src === 'blog-home' && cur.post && pushedCountRef.current > 0) {
-      // 文章 → 任意视图：原地替换（栈深不变，保留条目 id 供方向判断）
+    const saveScroll = () => {
+      if (cur && cur.src === 'blog-home') {
+        try { history.replaceState({ ...cur, scroll: getScrollTop() }, ''); } catch (e) {}
+      }
+    };
+    const pushEntry = (viewCat: string, viewPost: string | null) => {
+      const entry = { src: 'blog-home', cat: viewCat, post: viewPost, id: ++viewIdRef.current };
+      try { history.pushState(entry, '', buildURL(viewCat, viewPost)); } catch (e) { /* 限流时跳过入栈 */ }
+      if ((history.state as any)?.id === entry.id) {
+        pushedCountRef.current += 1;
+      } else {
+        // pushState 被浏览器丢弃（快速连点时可能发生）：并入当前记录，保持状态一致
+        try { history.replaceState({ ...entry, scroll: 0 }, ''); } catch (e) {}
+      }
+      lastIdRef.current = entry.id;
+      pendingScrollRef.current = 0;
+    };
+    if (post) {
+      if (isSameView(cur, cat, null)) {
+        // 当前正是该分类列表：保存列表滚动位置后压入文章
+        saveScroll();
+        pushEntry(cat, post);
+      } else if (cur && cur.src === 'blog-home' && cur.post && cur.cat === cat && pushedCountRef.current > 0) {
+        // 同分类文章 → 文章：父列表已就位，直接原地替换
+        try {
+          history.replaceState({ src: 'blog-home', cat, post, id: cur.id ?? 0 }, '', buildURL(cat, post));
+        } catch (e) { /* 限流等异常时跳过，状态仍然切换 */ }
+        lastIdRef.current = cur.id ?? 0;
+        pendingScrollRef.current = 0;
+      } else {
+        // 其他来源（其他分类列表/其他分类文章/直链文章）：
+        // 先把当前条目改写为该分类的列表作为返回目标，再压入文章
+        if (cur && cur.src === 'blog-home') {
+          try {
+            history.replaceState({ src: 'blog-home', cat, post: null, id: cur.id ?? 0, scroll: 0 }, '', buildURL(cat, null));
+          } catch (e) {}
+          lastIdRef.current = cur.id ?? 0;
+        }
+        pushEntry(cat, post);
+      }
+    } else if (cur && cur.src === 'blog-home' && cur.post && pushedCountRef.current > 0) {
+      // 文章 → 分类列表（TAB）：原地替换（栈深不变，保留条目 id 供方向判断）
       try {
-        history.replaceState({ src: 'blog-home', cat, post, id: cur.id ?? 0 }, '', buildURL(cat, post));
+        history.replaceState({ src: 'blog-home', cat, post: null, id: cur.id ?? 0 }, '', buildURL(cat, null));
       } catch (e) { /* 限流等异常时跳过，状态仍然切换 */ }
       lastIdRef.current = cur.id ?? 0;
       pendingScrollRef.current = 0;
     } else {
-      if (cur && cur.src === 'blog-home') {
-        try { history.replaceState({ ...cur, scroll: getScrollTop() }, ''); } catch (e) {}
-      }
-      const entry = { src: 'blog-home', cat, post, id: ++viewIdRef.current };
-      try {
-        history.pushState(entry, '', buildURL(cat, post));
-      } catch (e) { /* 限流时跳过入栈 */ }
-      if ((history.state as any)?.id === entry.id) {
-        pushedCountRef.current += 1;
-        pendingScrollRef.current = 0;
-      } else {
-        // pushState 被浏览器丢弃（快速连点时可能发生）：并入当前记录，保持状态一致
-        try { history.replaceState({ ...entry, scroll: cur?.scroll }, ''); } catch (e) {}
-      }
-      lastIdRef.current = entry.id;
+      // 列表 → 分类列表：保存当前列表滚动位置后压栈
+      saveScroll();
+      pushEntry(cat, null);
     }
     // 同步清理上一篇文章的数据：若等 effect 清理，会先绘制出一帧旧文章
     setFullPostData(null);
